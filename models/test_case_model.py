@@ -49,5 +49,4 @@ class TestCaseModel(Base):
     request_type = Column(String)
     interface = Column(String)
 
-    # Loads custom_metrics only when accessed, using a separate SELECT query
     custom_metrics = relationship("CustomMetricModel", back_populates="test_case", lazy="select")

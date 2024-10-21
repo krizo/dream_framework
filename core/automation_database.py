@@ -1,18 +1,24 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
-
 from models.base_model import Base
 
 
 class AutomationDatabase:
-    def __init__(self, db_url):
+    def __init__(self, db_url, dialect=None):
         """
         Initialize the AutomationDatabase.
 
         @param db_url: URL of the database to connect to
+        @param dialect: Optional dialect to emulate (e.g., 'mssql', 'oracle', 'mysql')
         """
-        self.engine = create_engine(db_url)
+        if dialect and db_url.startswith('sqlite'):
+            # Emulate specified dialect using SQLite
+            engine_url = f"{db_url}?odbc_dialect={dialect}"
+        else:
+            engine_url = db_url
+
+        self.engine = create_engine(engine_url)
         self.session_factory = sessionmaker(bind=self.engine)
         self.Session = scoped_session(self.session_factory)
 

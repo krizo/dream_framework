@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
+from typing import Generator
 
 from config.test_case_properties import TestCaseProperties
 from core.automation_database import AutomationDatabase
@@ -9,19 +10,45 @@ from models.test_case_model import TestCaseModel
 
 
 @pytest.fixture(scope="module")
-def db():
+def sqlite_db() -> AutomationDatabase:
+    """
+    Fixture that creates an in-memory SQLite database for testing.
+
+    @return: An instance of AutomationDatabase using SQLite.
+    """
     test_db = AutomationDatabase('sqlite:///:memory:')
     test_db.create_tables()
     return test_db
 
 
+@pytest.fixture(scope="module", params=['mssql', 'oracle', 'mysql'])
+def emulated_odbc_db(request: pytest.FixtureRequest) -> AutomationDatabase:
+    """
+    Fixture that creates an in-memory SQLite database emulating different ODBC dialects.
+
+    @param request: Pytest request object containing the database dialect parameter.
+    @return: An instance of AutomationDatabase emulating the specified ODBC dialect.
+    """
+    test_db = AutomationDatabase('sqlite:///:memory:', dialect=request.param)
+    test_db.create_tables()
+    return test_db
+
+
 @pytest.fixture
-def test_case():
+def test_case() -> TestCase:
+    """
+    Fixture that creates a sample TestCase instance for testing.
+
+    @return: An instance of TestCase with predefined properties.
+    """
     return TestCase(name="Sample Test", description="This is a sample test", test_suite="Integration",
                     scope="core", component="database")
 
 
-def test_test_case_creation(test_case):
+def test_test_case_creation(test_case: TestCase):
+    """
+    Test the creation of a TestCase instance and verify its initial state.
+    """
     assert test_case.test_name == "Sample Test"
     assert test_case.test_description == "This is a sample test"
     assert test_case.result is None
@@ -32,7 +59,10 @@ def test_test_case_creation(test_case):
     assert test_case.component == "database"
 
 
-def test_custom_metrics(test_case):
+def test_custom_metrics(test_case: TestCase):
+    """
+    Test the addition and retrieval of custom metrics in a TestCase.
+    """
     initial_metrics_count = len(test_case.custom_metrics)
     test_case.add_custom_metric("performance", 100)
     test_case.add_custom_metric("coverage", 0.85)
@@ -44,7 +74,10 @@ def test_custom_metrics(test_case):
     assert {"name": "coverage", "value": 0.85} in test_case.custom_metrics
 
 
-def test_to_model(test_case):
+def test_to_model(test_case: TestCase):
+    """
+    Test the conversion of a TestCase instance to a TestCaseModel.
+    """
     test_case.start()
     test_case.add_custom_metric("metric1", "value1")
     test_case.end(False)
@@ -64,7 +97,10 @@ def test_to_model(test_case):
     assert metric_dict["metric1"] == "value1"
 
 
-def test_from_model(test_case):
+def test_from_model(test_case: TestCase):
+    """
+    Test the creation of a TestCase instance from a TestCaseModel.
+    """
     model = TestCaseModel(
         test_name=test_case.test_name,
         test_description=test_case.test_description,
@@ -97,7 +133,33 @@ def test_from_model(test_case):
                for metric in test_case_from_model.custom_metrics)
 
 
-def test_test_case_database_integration(db, test_case):
+def test_sqlite_database_integration(sqlite_db: AutomationDatabase, test_case: TestCase):
+    """
+    Test the integration of TestCase with a SQLite database.
+
+    @param sqlite_db: The SQLite database fixture.
+    @param test_case: The TestCase fixture.
+    """
+    _test_database_integration(sqlite_db, test_case)
+
+
+def test_emulated_odbc_database_integration(emulated_odbc_db: AutomationDatabase, test_case: TestCase):
+    """
+    Test the integration of TestCase with emulated ODBC databases.
+
+    @param emulated_odbc_db: The emulated ODBC database fixture.
+    @param test_case: The TestCase fixture.
+    """
+    _test_database_integration(emulated_odbc_db, test_case)
+
+
+def _test_database_integration(db: AutomationDatabase, test_case: TestCase):
+    """
+    Helper function to test database integration for both SQLite and emulated ODBC databases.
+
+    @param db: The database fixture (either SQLite or emulated ODBC).
+    @param test_case: The TestCase fixture.
+    """
     test_case.start()
     test_case.add_custom_metric("db_metric", "db_value")
     test_case.end(True)
@@ -105,6 +167,7 @@ def test_test_case_database_integration(db, test_case):
     model = test_case.to_model()
     db.insert(model)
 
+    # Retrieve the TestCase from the database
     retrieved_model = db.query(TestCaseModel).filter_by(test_name=test_case.test_name).first()
     retrieved_test_case = TestCase.from_model(retrieved_model)
 
@@ -112,9 +175,11 @@ def test_test_case_database_integration(db, test_case):
     assert retrieved_test_case.test_description == test_case.test_description
     assert retrieved_test_case.result is True
 
+    # Check TestCaseProperties
     for prop in TestCaseProperties:
         prop_name = prop.name.lower()
         assert getattr(retrieved_test_case, prop_name) == getattr(test_case, prop_name)
 
+    # Check custom metric
     assert any(metric["name"] == "db_metric" and metric["value"] == "db_value"
                for metric in retrieved_test_case.custom_metrics)

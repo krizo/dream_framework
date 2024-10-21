@@ -21,8 +21,6 @@ def db():
 def test_database_initialization(db):
     """
     Test if the database is properly initialized.
-
-    @param db: AutomationDatabase fixture
     """
     assert db.engine is not None
     assert db.Session is not None
@@ -31,8 +29,6 @@ def test_database_initialization(db):
 def test_create_tables(db):
     """
     Test if tables are created correctly.
-
-    @param db: AutomationDatabase fixture
     """
     inspector = inspect(db.engine)
     assert 'test_cases' in inspector.get_table_names()
@@ -42,8 +38,6 @@ def test_create_tables(db):
 def test_insert_and_query(db):
     """
     Test inserting a record and querying it.
-
-    @param db: AutomationDatabase fixture
     """
     test_case = TestCaseModel(test_name="Test 1", result=True)
     db.insert(test_case)
@@ -57,8 +51,6 @@ def test_insert_and_query(db):
 def test_update(db):
     """
     Test updating a record.
-
-    @param db: AutomationDatabase fixture
     """
     test_case = db.query(TestCaseModel).filter_by(test_name="Test 1").first()
     test_case.result = False
@@ -71,8 +63,6 @@ def test_update(db):
 def test_delete(db):
     """
     Test deleting a record.
-
-    @param db: AutomationDatabase fixture
     """
     test_case = db.query(TestCaseModel).filter_by(test_name="Test 1").first()
     db.delete(test_case)
@@ -84,8 +74,6 @@ def test_delete(db):
 def test_custom_metric(db):
     """
     Test creating a test case with a custom metric.
-
-    @param db: AutomationDatabase fixture
     """
     test_case = TestCaseModel(test_name="Test with Metric")
     metric = CustomMetricModel(name="Performance", value={"speed": 100})
@@ -109,8 +97,6 @@ def test_custom_metric(db):
 def test_session_scope(db):
     """
     Test if session_scope properly manages transactions.
-
-    @param db: AutomationDatabase fixture
     """
     with pytest.raises(Exception):
         with db.session_scope() as session:
