@@ -74,20 +74,3 @@ class AutomationDatabase:
         """
         with self.session_scope() as session:
             session.merge(obj)
-
-    def refresh(self, obj):
-        """
-                Refresh the state of the given instance from the database.
-
-        This method synchronizes the state of the object in memory with its current state in the database.
-        It's useful when the database might have been modified by another process or transaction.
-
-        The method first merges the object with the current session (to ensure it's associated with this session),
-        then refreshes it from the database.
-
-        @param obj: The object to refresh
-        @note: This operation will overwrite any local changes that haven't been committed to the database.
-        @warning: This can be expensive for large objects or complex relationships.
-        """
-        with self.session_scope() as session:
-            session.refresh(session.merge(obj))

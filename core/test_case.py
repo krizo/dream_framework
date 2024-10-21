@@ -4,6 +4,8 @@ from typing import List, Callable, Optional, Any, Dict
 from datetime import datetime
 
 from config.test_case_properties import TestCaseProperties
+from models.custom_metric_model import CustomMetricModel
+from models.test_case_model import TestCaseModel
 
 
 class TestCasePropertyError(Exception):
@@ -19,12 +21,14 @@ class TestCase(ABC):
     result tracking, and callback functionality.
     """
 
-    def __init__(self, name: Optional[str] = None, description: Optional[str] = None, **properties):
+    def __init__(self, name: Optional[str] = None, description: Optional[str] = None, test_suite: str = None,
+                 **properties):
         """
         Initialize a new TestCase instance.
 
         @param name: Name of the test case.
         @param description: Description of the test case.
+        @param test_suite: test_suite of the test
         @param properties: Additional properties for the test case, usually test metrics to be tracked.
         @raises TestCasePropertyError: If an invalid property is provided or a required property is missing.
         """
@@ -32,6 +36,7 @@ class TestCase(ABC):
         self.test_run_id: Optional[str] = None
         self.test_name: str = name or ""
         self.test_description: str = description or ""
+        self._test_suite = test_suite
         self.failure: str = ""
         self.failure_type: str = ""
         self.result: Optional[bool] = None
@@ -48,9 +53,12 @@ class TestCase(ABC):
             self._user_stories: Optional[List[str]] = properties.pop('user_stories')
         self._properties: Dict[str, Any] = {}
         self._initialize_properties(properties)
+        self.custom_metrics: List[dict] = []
 
         for prop_name, prop_value in properties.items():
-            setattr(self, prop_name.lower(), prop_value)
+            prop_name = prop_name.lower()
+            setattr(self, prop_name, prop_value)
+            self.custom_metrics.append({"name": prop_name, "value": prop_value})
 
     @staticmethod
     def _get_test_function() -> Optional[str]:
@@ -112,14 +120,13 @@ class TestCase(ABC):
         self._properties[name] = value
 
     @property
-    @abstractmethod
     def test_suite(self) -> str:
         """
         Get the test suite name.
 
         @returns: The name of the test suite.
         """
-        pass
+        return self._test_suite
 
     @property
     def user_stories(self) -> Optional[List[str]]:
@@ -198,3 +205,78 @@ class TestCase(ABC):
             result[prop.name.lower()] = self._properties.get(prop.name)
 
         return result
+
+    def start(self):
+        self.start_time = datetime.now()
+
+    def end(self, result: bool):
+        self.end_time = datetime.now()
+        self.result = result
+
+    def add_custom_metric(self, name: str, value: any):
+        self.custom_metrics.append({"name": name, "value": value})
+
+    def to_model(self) -> TestCaseModel:
+        model = TestCaseModel(
+            test_name=self.test_name,
+            test_description=self.test_description,
+            test_suite=self.test_suite,
+            result=self.result,
+            start_time=self.start_time,
+            end_time=self.end_time,
+            failure=self.failure,
+            failure_type=self.failure_type,
+            duration=self.duration,
+            test_function=self.test_function,
+            environment=self.environment,
+            test_type=self.test_type
+        )
+
+        # Add dynamic properties as custom metrics
+        for prop in TestCaseProperties:
+            prop_name = prop.name.lower()
+            prop_value = getattr(self, prop_name, None)
+            if prop_value is not None:
+                model.custom_metrics.append(
+                    CustomMetricModel(name=prop_name, value=prop_value)
+                )
+
+        # Add other custom metrics
+        for metric in self.custom_metrics:
+            model.custom_metrics.append(
+                CustomMetricModel(name=metric["name"], value=metric["value"])
+            )
+        return model
+
+    @classmethod
+    def from_model(cls, model: TestCaseModel) -> 'TestCase':
+        properties = {}
+        for prop in TestCaseProperties:
+            prop_name = prop.name.lower()
+            metric = next((m for m in model.custom_metrics if m.name.lower() == prop_name), None)
+            if metric:
+                properties[prop_name] = metric.value
+            elif prop.value.required:
+                raise TestCasePropertyError(f"Required property '{prop.name}' is not set")
+
+        test_case = cls(
+            name=model.test_name,
+            description=model.test_description,
+            test_suite=model.test_suite,
+            **properties
+        )
+        test_case.result = model.result
+        test_case.start_time = model.start_time
+        test_case.end_time = model.end_time
+        test_case.failure = model.failure
+        test_case.failure_type = model.failure_type
+        test_case.duration = model.duration
+        test_case.test_function = model.test_function
+        test_case.environment = model.environment
+        test_case.test_type = model.test_type
+
+        for metric in model.custom_metrics:
+            if metric.name.upper() not in TestCaseProperties.__members__:
+                test_case.add_custom_metric(metric.name, metric.value)
+
+        return test_case

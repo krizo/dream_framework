@@ -95,9 +95,6 @@ def test_custom_metric(db):
     # Query the test case and check if the metric was saved
     queried_test = db.query(TestCaseModel).filter_by(test_name="Test with Metric").first()
 
-    # Refresh the queried object to ensure we have the latest data
-    db.refresh(queried_test)
-
     assert queried_test is not None, "Test case was not saved"
     assert len(queried_test.custom_metrics) == 1, "Custom metric was not saved"
     assert queried_test.custom_metrics[0].name == "Performance", "Custom metric name is incorrect"
