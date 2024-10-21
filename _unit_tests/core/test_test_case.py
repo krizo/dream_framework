@@ -38,8 +38,8 @@ def test_not_specified_properties_negative():
 
 def test_optional_properties():
     test_case = ConcreteTestCase(scope="Unit", component="API", request_type="GET", interface="REST")
-    assert test_case.scope == "Unit"
-    assert test_case.interface == "REST"
+    assert test_case.scope == "Unit", "Failed to initialize ConcreteTestCase with optional fields"
+    assert test_case.interface == "REST", "Failed to initialize ConcreteTestCase with optional fields"
 
 
 def test_property_type_checking_negative():
@@ -100,10 +100,10 @@ def test_extend_test_name_with_test_function_param(test_case):
 
 
 def test_user_stories_none(test_case):
-    assert test_case.user_stories is None
+    assert test_case.user_stories is None, "Initialize TestCase with no User Stories"
 
 
 def test_user_stories_true(test_case):
     test_case = ConcreteTestCase(name="Test with Stories", description="Test Description", component="API",
                                  scope='Backend', user_stories=[12345, 'https://example.com/123'])
-    assert test_case.user_stories == [12345, 'https://example.com/123']
+    assert test_case.user_stories == [12345, 'https://example.com/123'], "Initialize TestCase with specific User Stories"
