@@ -33,16 +33,18 @@ class TestCase(ABC):
         @raises TestCasePropertyError: If an invalid property is provided or a required property is missing.
         """
         self.id: Optional[str] = None
-        self.test_run_id: Optional[str] = None
+
         self.test_name: str = name or ""
         self.test_description: str = description or ""
         self._test_suite = test_suite
         self.failure: str = ""
         self.failure_type: str = ""
         self.result: Optional[bool] = None
-        self.duration: Optional[float] = None
-        self.test_function: Optional[str] = self._get_test_function()
+        self.duration: Optional[int] = None
+        self.test_function: Optional[str] = None
+        self.test_module: Optional[str] = None
         self.start_time: Optional[datetime] = None
+        self.test_run_id: str = self._test_run_id
         self.end_time: Optional[datetime] = None
         self.environment: Optional[str] = None
         self.test_type: Optional[str] = None
@@ -60,17 +62,10 @@ class TestCase(ABC):
             setattr(self, prop_name, prop_value)
             self.custom_metrics.append({"name": prop_name, "value": prop_value})
 
-    @staticmethod
-    def _get_test_function() -> Optional[str]:
-        """
-        Get the name of the current test function from the environment.
-
-        @returns: The name of the current test function.
-        """
-        pytest_current_test = os.environ.get('PYTEST_CURRENT_TEST')
-        if pytest_current_test:
-            return pytest_current_test.split(':')[-1].split(' ')[0].split('@')[0]
-        return None
+    @property
+    def _test_run_id(self) -> str:
+        """Unique test run id. Based on xdist id (for parallel runs using xdist plugin) or date time for single runs """
+        return os.getenv('PYTEST_XDIST_TESTRUNUID') or datetime.now().strftime("%y%m%d%H%M%S%f")
 
     def _initialize_properties(self, properties: Dict[str, Any]):
         """

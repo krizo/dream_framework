@@ -1,9 +1,14 @@
+import os
+from urllib.parse import urlparse
+
 from core.automation_database import AutomationDatabase
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
 import yaml
+
+from models.base_model import Base
 
 
 @dataclass
@@ -133,3 +138,25 @@ class AutomationDatabaseManager:
         @return: True if database is initialized, False otherwise
         """
         return cls._db_instance is not None
+
+    @classmethod
+    def remove(cls) -> None:
+        """
+        Remove database file if it's a file-based database.
+        Used primarily for testing to ensure clean state.
+
+        @note: Only removes file if using file-based database (e.g., SQLite)
+        """
+        if cls._config and cls._config.url.startswith('sqlite:///'):
+            # Extract file path from SQLite URL by removing 'sqlite:///'
+            db_path = cls._config.url.replace('sqlite:///', '')
+
+            # Handle relative and absolute paths
+            if db_path and db_path != ':memory:':
+                try:
+                    if os.path.exists(db_path):
+                        os.remove(db_path)
+                        print(f"Removed database file: {db_path}")
+                except Exception as e:
+                    print(f"Warning: Could not remove database file {db_path}: {str(e)}")
+        cls.close()
