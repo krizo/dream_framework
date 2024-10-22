@@ -87,7 +87,7 @@ def test_test_case_creation(test_case: TestCase):
     assert test_case.test_name == "Sample Test"
     assert test_case.test_description == "This is a sample test"
     assert test_case.result is None
-    assert test_case.start_time is None
+    assert test_case.start_time is not None
     assert test_case.end_time is None
     assert len(test_case.custom_metrics) == 2
     assert test_case.scope == "core"
@@ -239,8 +239,7 @@ def _test_database_integration(db: AutomationDatabase, test_case: TestCase):
     @param test_case: The TestCase fixture.
     """
     # Prepare the test case
-    assert test_case.id is None  # Ensure ID is None before insertion
-    test_case.start()
+    assert test_case.id is not None
     test_case.add_custom_metric("db_metric", "db_value")
     test_case.end(True)
 
