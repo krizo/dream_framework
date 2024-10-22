@@ -27,48 +27,69 @@ The `TestCase` class serves as the foundation for creating specific tests. It ma
 - `custom_metrics`: List of custom metrics for flexible data storage
 
 ### TestCaseProperties
-[Previous TestCaseProperties content remains unchanged]
+The `TestCaseProperties` class is an enumeration that defines the available test metrics (both required or optional) 
+for your test cases. It works in conjunction with the `TestCase` class to provide a flexible way of defining 
+and using custom test metrics.
 
-## Database Integration
+```yaml
+automation_db:
+  url: "sqlite:///automation.db"
+  dialect: null
 
-### AutomationDatabase Class
-The framework provides database integration through the `AutomationDatabase` class, which supports various database dialects.
+# Example configurations for different environments
+dev:
+  url: "mssql+pyodbc://user:pass@server/database"
+  dialect: "mssql"
 
-```python
-from core.automation_database import AutomationDatabase
-
-# Initialize with SQLite
-db = AutomationDatabase('sqlite:///tests.db')
-
-# Initialize with ODBC connection
-db = AutomationDatabase('connection_string', dialect='mssql')
+test:
+  url: "sqlite:///:memory:"
+  dialect: null
 ```
 
-### Supported Database Operations
+### AutomationDatabaseManager
+The framework provides a singleton database manager for centralized database access:
 
-#### Inserting Test Cases
 ```python
-test_case = MyPerformanceTest(
-    name="Database Query Performance",
-    description="Verify query execution time",
-    scope="Performance",
-    component="DatabaseService"
-)
+from core.automation_database_manager import AutomationDatabaseManager
 
-# Insert test case and get its ID
-test_case_id = db.insert_test_case(test_case)
+# Initialize with direct connection string
+AutomationDatabaseManager.initialize('sqlite:///test.db')
+
+# Initialize with configuration file
+AutomationDatabaseManager.initialize(config_path='config/database.yaml')
+
+# Get database instance
+db = AutomationDatabaseManager.get_database()
+
+# Check initialization status
+if AutomationDatabaseManager.is_initialized():
+    config = AutomationDatabaseManager.get_config()
 ```
 
-#### Fetching Test Cases
-```python
-# Retrieve a test case by ID
-retrieved_test_case = db.fetch_test_case(test_case_id)
-```
+## Pytest Integration
 
-#### Updating Test Cases
+### Automatic Test Case Persistence
+The framework includes a pytest plugin that automatically handles test case persistence:
+
 ```python
-test_case.result = True
-update_success = db.update_test_case(test_case)
+class MyTest(TestCase):
+    def __init__(self):
+        super().__init__(
+            name="Test Name",
+            description="Test Description",
+            test_suite="MySuite",
+            component="MyComponent",
+            scope="Integration"
+        )
+
+def test_example(my_test_fixture):
+    # Test case is automatically persisted before test execution
+    my_test_fixture.add_custom_metric("metric_name", "value")
+    
+    # Test execution...
+    
+    # Test results and metrics are automatically updated after test completion
+```
 ```
 
 ### Supported Database Dialects
@@ -97,27 +118,8 @@ db_postgres = AutomationDatabase('postgresql+psycopg2://user:pass@server/databas
 All test case data, including custom metrics and properties, is automatically persisted to the database. The framework handles:
 - Serialization of complex data types
 - Automatic type conversion for different database dialects
-- Relationship management between test cases and their metrics
+- Relationship management between test cases and their custom metrics
 
-## Custom Metrics Persistence
-Custom metrics defined in `TestCaseProperties` are automatically persisted as part of the test case:
-
-```python
-# Create a test case with custom metrics
-test_case = MyPerformanceTest(
-    name="Performance Test",
-    scope="Performance",
-    component="API",
-    performance_threshold=0.5
-)
-
-# Add runtime metrics
-test_case.add_custom_metric("response_time", 0.43)
-test_case.add_custom_metric("error_rate", 0.02)
-
-# Save to database
-db.insert_test_case(test_case)
-```
 
 ## Best Practices
 1. Define all possible test metrics in `TestCaseProperties`, even if they're not always used.
