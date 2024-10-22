@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker, scoped_session
 from contextlib import contextmanager
 
@@ -10,22 +10,45 @@ from models.test_case_model import TestCaseModel
 
 
 class AutomationDatabase:
-    def __init__(self, db_url, dialect=None):
+    def __init__(self, db_url: str, dialect: Optional[str] = None):
         """
-        Initialize the AutomationDatabase.
+        Initialize the AutomationDatabase. This database is used to store test execution data, including test cases,
+        their results, metrics, and other test automation artifacts.
 
         @param db_url: URL of the database to connect to
         @param dialect: Optional dialect to emulate (e.g., 'mssql', 'oracle', 'mysql')
         """
+        self._dialect = dialect
         if dialect and db_url.startswith('sqlite'):
-            # Emulate specified dialect using SQLite
             engine_url = f"{db_url}?odbc_dialect={dialect}"
         else:
             engine_url = db_url
 
-        self.engine = create_engine(engine_url)
+        # For SQLite in-memory database, we need to maintain a single connection
+        # to preserve the data between operations
+        if db_url == 'sqlite:///:memory:':
+            self.engine = create_engine(
+                engine_url,
+                connect_args={'check_same_thread': False},
+                poolclass=StaticPool  # Use static pool for in-memory database
+            )
+        else:
+            self.engine = create_engine(engine_url)
+
         self.session_factory = sessionmaker(bind=self.engine)
         self.Session = scoped_session(self.session_factory)
+
+        # Create all tables immediately
+        Base.metadata.create_all(self.engine)
+
+    @property
+    def dialect(self) -> Optional[str]:
+        """
+        Get the current database dialect.
+
+        @return: Current dialect name or None if not set
+        """
+        return self._dialect
 
     def create_tables(self):
         """
@@ -86,19 +109,6 @@ class AutomationDatabase:
         with self.session_scope() as session:
             session.merge(obj)
 
-    def fetch_test_case(self, test_case_id: int) -> Optional[TestCase]:
-        """
-        Fetch a TestCase from the database by its ID.
-
-        @param test_case_id: The ID of the TestCase to fetch
-        @return: TestCase object if found, None otherwise
-        """
-        with self.session_scope() as session:
-            test_case_model = session.query(TestCaseModel).filter_by(id=test_case_id).first()
-            if test_case_model:
-                return TestCase.from_model(test_case_model)
-        return None
-
     def insert_test_case(self, test_case: TestCase) -> int:
         """
         Insert a TestCase into the database.
@@ -106,13 +116,35 @@ class AutomationDatabase:
         @param test_case: The TestCase object to insert
         @return: The ID of the inserted TestCase
         """
+        print(f"\nAutomationDatabase: inserting test case")
         with self.session_scope() as session:
             test_case_model = test_case.to_model()
-            test_case_model.id = None  # Ensure we're not trying to insert with a pre-existing ID
+            test_case_model.id = None
             session.add(test_case_model)
-            session.flush()  # This will assign a new ID to the model
-            test_case.id = test_case_model.id  # Update the TestCase with the new ID
+            session.flush()
+            test_case.id = test_case_model.id
+            print(f"Test case saved with ID: {test_case.id}")
+            # Commit immediately for in-memory database
+            session.commit()
             return test_case_model.id
+
+    def fetch_test_case(self, test_case_id: int) -> Optional[TestCase]:
+        """
+        Fetch a TestCase from the database by its ID.
+
+        @param test_case_id: The ID of the TestCase to fetch
+        @return: TestCase object if found, None otherwise
+        """
+        print(f"\nAutomationDatabase: fetching test case with ID: {test_case_id}")
+        with self.session_scope() as session:
+            # Use refresh_expire for in-memory database
+            session.expire_all()
+            test_case_model = session.query(TestCaseModel).filter_by(id=test_case_id).first()
+            if test_case_model:
+                print("Test case found in database")
+                return TestCase.from_model(test_case_model)
+            print("Test case NOT found in database")
+        return None
 
     def update_test_case(self, test_case: TestCase) -> bool:
         """
