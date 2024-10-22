@@ -265,6 +265,7 @@ class TestCase(ABC):
             test_suite=model.test_suite,
             **properties
         )
+        test_case.id = model.id
         test_case.result = model.result
         test_case.start_time = model.start_time
         test_case.end_time = model.end_time
@@ -275,8 +276,11 @@ class TestCase(ABC):
         test_case.environment = model.environment
         test_case.test_type = model.test_type
 
+        # Ensure all custom metrics are added as properties and to custom_metrics
         for metric in model.custom_metrics:
-            if metric.name.upper() not in TestCaseProperties.__members__:
-                test_case.add_custom_metric(metric.name, metric.value)
+            if not hasattr(test_case, metric.name.lower()):
+                setattr(test_case, metric.name.lower(), metric.value)
+            if {"name": metric.name, "value": metric.value} not in test_case.custom_metrics:
+                test_case.custom_metrics.append({"name": metric.name, "value": metric.value})
 
         return test_case
