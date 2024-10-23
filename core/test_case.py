@@ -1,14 +1,13 @@
 import os
 from abc import ABC, abstractmethod
-from typing import List, Callable, Optional, Any, Dict
 from datetime import datetime
+from typing import List, Callable, Optional, Any, Dict
 
 from config.test_case_properties import TestCaseProperties
 
 
 class TestCasePropertyError(Exception):
     """Exception raised when there's an error with test case properties."""
-    pass
 
 
 class TestCase(ABC):
@@ -103,7 +102,7 @@ class TestCase(ABC):
         Set the value of a test case property.
 
         @param name: The name of the property.
-        @param value: The value to set.
+        @param value: The value to set.x
         @raises TypeError: If the value is not of the expected type.
         """
         prop_info = TestCaseProperties[name].value
@@ -153,21 +152,13 @@ class TestCase(ABC):
             for callback in self.on_failure_callbacks:
                 callback()
 
-    def add_on_success_callback(self, callback: Callable[[], None]) -> None:
+    def on_test_case_end_callback(self, callback: Callable[[], None]) -> None:
         """
-        Add a callback to be executed when the test passes.
+        Add a callback to be executed when the test ends.
 
         @param callback: The callback function to add.
         """
         self.on_success_callbacks.append(callback)
-
-    def add_on_failure_callback(self, callback: Callable[[], None]) -> None:
-        """
-        Add a callback to be executed when the test fails.
-
-        @param callback: The callback function to add.
-        """
-        self.on_failure_callbacks.append(callback)
 
     def to_dict(self) -> dict:
         """
