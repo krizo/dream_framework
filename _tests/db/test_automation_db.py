@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import inspect
 
 from core.automation_database import AutomationDatabase
-from models.test_case_model import TestCaseModel
 from models.custom_metric_model import CustomMetricModel
+from models.test_case_model import TestCaseModel
 
 
 @pytest.fixture(scope="module")
@@ -72,9 +72,7 @@ def test_delete(db):
 
 
 def test_custom_metric(db):
-    """
-    Test creating a test case with a custom metric.
-    """
+    """ Test creating a test case with a custom metric. """
     test_case = TestCaseModel(test_name="Test with Metric")
     metric = CustomMetricModel(name="Performance", value={"speed": 100})
     test_case.custom_metrics.append(metric)
