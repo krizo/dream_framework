@@ -1,14 +1,12 @@
 import os
-from urllib.parse import urlparse
-
-from core.automation_database import AutomationDatabase
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
 import yaml
 
-from models.base_model import Base
+from core.automation_database import AutomationDatabase
+from core.logger import Log
 
 
 @dataclass
@@ -156,7 +154,7 @@ class AutomationDatabaseManager:
                 try:
                     if os.path.exists(db_path):
                         os.remove(db_path)
-                        print(f"Removed database file: {db_path}")
+                        Log.step(f"Removed database file: {db_path}")
                 except Exception as e:
-                    print(f"Warning: Could not remove database file {db_path}: {str(e)}")
+                    Log.step(f"Warning: Could not remove database file {db_path}: {str(e)}")
         cls.close()

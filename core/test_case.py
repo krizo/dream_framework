@@ -1,9 +1,11 @@
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
 from typing import List, Callable, Optional, Any, Dict
 
 from config.test_case_properties import TestCaseProperties
+from core.logger import Log
+from helpers.data_time_helper import format_duration
 from models.custom_metric_model import CustomMetricModel
 from models.test_case_model import TestCaseModel
 
@@ -194,10 +196,23 @@ class TestCase(ABC):
 
     def start(self):
         self.start_time = datetime.now()
+        Log.separator()
+        Log.info(f"Test function: {self.test_function}")
+        Log.info(f"Test module: {self.test_module}")
+        Log.info(f"Test name: {self.test_name}")
+        Log.info(f"Test description: {self.test_description}")
+        Log.info(f"Test Suite: {self.test_suite}")
+        Log.info(f"Test RunID: {self.test_run_id}")
+        Log.info(f"Start time: {self.start_time.strftime('%y-%m-%d %H:%M:%S')}")
 
     def end(self, result: bool):
         self.end_time = datetime.now()
         self.result = result
+        self.duration = (self.end_time - self.start_time).total_seconds()
+        Log.separator()
+        Log.info(f"Test finished at: {self.end_time.strftime('%y-%m-%d %H:%M:%S')}")
+        Log.info(f"Result: {self.result}")
+        Log.info(f"Duration: {format_duration(self.duration)}")
 
     def add_custom_metric(self, name: str, value: any):
         self.custom_metrics.append({"name": name, "value": value})
