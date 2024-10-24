@@ -1,5 +1,6 @@
-import pytest
 from datetime import datetime
+
+import pytest
 
 from core.test_case import TestCase, TestCasePropertyError
 
@@ -67,7 +68,7 @@ def test_to_dict():
     assert test_dict['duration'] == 10.0
 
 
-def test_set_result_and_callbacks_success(test_case):
+def test_set_result_and_callbacks_end(test_case):
     success_called = False
 
     def on_success():
@@ -75,24 +76,10 @@ def test_set_result_and_callbacks_success(test_case):
         nonlocal success_called
         success_called = True
 
-    test_case.add_on_success_callback(on_success)
+    test_case.on_test_case_end_callback(on_success)
     test_case.set_result(True)  # test passed
 
     assert success_called, "on_success() wasn't called after test passed successfully "
-
-
-def test_set_result_and_callbacks_failure(test_case):
-    failure_called = False
-
-    def on_failure():
-        nonlocal failure_called
-        failure_called = True
-
-    test_case.add_on_failure_callback(on_failure)
-
-    assert not failure_called, "on_failure() wasn't called after test failed"
-    test_case.set_result(False)  # Test failed
-    assert failure_called
 
 
 def test_extend_test_name_with_test_function_param(test_case):
@@ -106,4 +93,5 @@ def test_user_stories_none(test_case):
 def test_user_stories_true(test_case):
     test_case = ConcreteTestCase(name="Test with Stories", description="Test Description", component="API",
                                  scope='Backend', user_stories=[12345, 'https://example.com/123'])
-    assert test_case.user_stories == [12345, 'https://example.com/123'], "Initialize TestCase with specific User Stories"
+    assert test_case.user_stories == [12345,
+                                      'https://example.com/123'], "Initialize TestCase with specific User Stories"
