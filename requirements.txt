@@ -1,0 +1,4 @@
+annotated-types==0.7.0      # Type annotations with metadata
+typing_extensions==4.12.2   # Extended typing features
+pydantic==2.9.2            # Data validation library
+pydantic_core==2.23.4      # Pydantic core engine
