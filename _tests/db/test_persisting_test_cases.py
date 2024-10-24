@@ -1,7 +1,6 @@
-import pytest
 from datetime import datetime, timedelta
-from typing import Generator
 
+import pytest
 from _pytest.fixtures import FixtureRequest
 
 from config.test_case_properties import TestCaseProperties
@@ -77,7 +76,7 @@ def test_case() -> TestCase:
     @return: An instance of TestCase with predefined properties.
     """
     return TestCase(name="Sample Test", description="This is a sample test", test_suite="Integration",
-                    scope="core", component="database")
+                    scope="integration", component="database")
 
 
 def test_test_case_creation(test_case: TestCase):
@@ -90,7 +89,7 @@ def test_test_case_creation(test_case: TestCase):
     assert test_case.start_time is not None
     assert test_case.end_time is None
     assert len(test_case.custom_metrics) == 2
-    assert test_case.scope == "core"
+    assert test_case.scope == "integration"
     assert test_case.component == "database"
 
 
@@ -103,7 +102,7 @@ def test_custom_metrics(test_case: TestCase):
     test_case.add_custom_metric("coverage", 0.85)
 
     assert len(test_case.custom_metrics) == initial_metrics_count + 2
-    assert {"name": "scope", "value": "core"} in test_case.custom_metrics
+    assert {"name": "scope", "value": "integration"} in test_case.custom_metrics
     assert {"name": "component", "value": "database"} in test_case.custom_metrics
     assert {"name": "performance", "value": 100} in test_case.custom_metrics
     assert {"name": "coverage", "value": 0.85} in test_case.custom_metrics
@@ -127,7 +126,7 @@ def test_to_model(test_case: TestCase):
     assert len(model.custom_metrics) == expected_metrics_count
 
     metric_dict = {m.name: m.value for m in model.custom_metrics}
-    assert metric_dict["scope"] == "core"
+    assert metric_dict["scope"] == "integration"
     assert metric_dict["component"] == "database"
     assert metric_dict["metric1"] == "value1"
 

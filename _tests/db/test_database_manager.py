@@ -1,4 +1,5 @@
 import pytest
+
 from core.automation_database import AutomationDatabase
 from core.automation_database_manager import AutomationDatabaseManager
 
