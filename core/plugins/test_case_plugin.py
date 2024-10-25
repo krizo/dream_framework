@@ -57,7 +57,7 @@ class TestCasePlugin:
             inserted_id = db.insert_test_case(test_case)
             Log.info(f"Test case inserted successfully. TestCase.Id: {inserted_id}")
         except Exception as e:
-            Log.error(f"Error inserting test case: {str(e)}")
+            Log.error(message="Error inserting test case", exception=e)
             raise
 
     @pytest.hookimpl(hookwrapper=True)
@@ -87,7 +87,7 @@ class TestCasePlugin:
                 db.update_test_case(test_case)
                 Log.info(f"Test case updated in database. TestCase.Id: {test_case.id}")
             except Exception as e:
-                Log.error(f"Failed to update test case in database: {str(e)}")
+                Log.error("Failed to update test case in database", e)
 
 
 def get_logger_config(test_function: str) -> dict:

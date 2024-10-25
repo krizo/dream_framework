@@ -124,7 +124,6 @@ class Log:
         @param message: str - Message to be logged
         @param args: tuple - Variable length argument list
         @param kwargs: dict - Arbitrary keyword arguments
-        @return None
         """
         logger = cls._get_logger()
         logger.log(level.value, message, *args, **kwargs)
@@ -135,7 +134,6 @@ class Log:
         Log console message (visible only in console output).
 
         @param message: str - Console message to be logged
-        @return None
         """
         cls._log(LogLevel.CONSOLE, message)
 
@@ -145,7 +143,6 @@ class Log:
         Log debug message.
 
         @param message: str - Debug message to be logged
-        @return None
         """
         cls._log(LogLevel.DEBUG, message)
 
@@ -155,7 +152,6 @@ class Log:
         Log info message (visible in pytest report).
 
         @param message: str - Info message to be logged
-        @return None
         """
         cls._log(LogLevel.INFO, message)
 
@@ -166,7 +162,6 @@ class Log:
         Steps are logged at custom STEP level for high visibility.
 
         @param message: str - Step description to be logged
-        @return None
         """
         cls._step_counter += 1
         cls._log(LogLevel.STEP, f"Step {cls._step_counter}: {message}")
@@ -177,18 +172,18 @@ class Log:
         Log warning message.
 
         @param message: str - Warning message to be logged
-        @return None
         """
         cls._log(LogLevel.WARNING, message)
 
     @classmethod
-    def error(cls, message: str):
+    def error(cls, message: str, exception: Exception = ''):
         """
         Log error message.
 
         @param message: str - Error message to be logged
-        @return None
+        @param exception: exception to be logged
         """
+        message += f": {str(exception)}"
         cls._log(LogLevel.ERROR, message)
 
     @classmethod
@@ -197,7 +192,6 @@ class Log:
         Log critical message.
 
         @param message: str - Critical message to be logged
-        @return None
         """
         cls._log(LogLevel.CRITICAL, message)
 
@@ -208,7 +202,6 @@ class Log:
 
         @param char: str - Character to use for the separator line (default: '-')
         @param length: int - Length of the separator line (default: 80)
-        @return None
         """
         separator_line = char * length
         cls._log(LogLevel.EMPTY, separator_line)
@@ -218,6 +211,5 @@ class Log:
         """
         Reset step counter to 0.
 
-        @return None
         """
         cls._step_counter = 0
