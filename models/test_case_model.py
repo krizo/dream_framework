@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime
 from sqlalchemy.orm import relationship
+
 from models.base_model import Base
 
 
@@ -44,9 +45,5 @@ class TestCaseModel(Base):
     environment = Column(String)
     test_type = Column(String)
     test_suite = Column(String)
-    scope = Column(String)
-    component = Column(String)
-    request_type = Column(String)
-    interface = Column(String)
 
     custom_metrics = relationship("CustomMetricModel", back_populates="test_case", lazy="select")

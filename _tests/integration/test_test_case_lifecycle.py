@@ -5,6 +5,7 @@ import time
 import pytest
 
 from core.automation_database_manager import AutomationDatabaseManager
+from core.logger import Log
 from core.test_case import TestCase
 
 
@@ -63,15 +64,12 @@ def login_test_case(request):
     @param request: pytest request object
     @return: LoginTestCase instance
     """
-    print("\nCreating login test case")
     test_case = LoginTestCase()
     yield test_case
 
-    print(f"\nIn fixture teardown - test case ID: {test_case.id}")
     retrieved_case = AutomationDatabaseManager.get_database().fetch_test_case(test_case_id=test_case.id)
-    print(f"Retrieved case is None: {retrieved_case is None}")
     if retrieved_case:
-        print(f"Retrieved case details: {retrieved_case.test_name}")
+        Log.step(f"Retrieved case details: {retrieved_case.test_name}")
     assert retrieved_case is not None, f"Test case with ID {test_case.id} not found in database"
 
 
@@ -82,7 +80,7 @@ def test_user_login(login_test_case):
 
     @param login_test_case: LoginTestCase fixture
     """
-    print(f"\nIn test - test case ID before metric: {login_test_case.id}")
+    Log.step(f"In test - test case ID before metric: {login_test_case.id}")
     login_test_case.add_custom_metric("user_id", "12345")
-    print(f"Test case ID after metric: {login_test_case.id}")
+    Log.step(f"Test case ID after metric: {login_test_case.id}")
     time.sleep(1)

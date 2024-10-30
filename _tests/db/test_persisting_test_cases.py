@@ -305,7 +305,7 @@ def test_fetch_insert_update_test_case(sqlite_db: AutomationDatabase, test_case:
     assert updated_test_case.test_name == "Updated Test Name"
 
 
-def test_fetch_nonexistent_test_case(sqlite_db: AutomationDatabase):
+def test_fetch_nonexistent_test_case(sqlite_db: AutomationDatabase, test_case: TestCase):
     """
     Test fetching a non-existent TestCase.
 
