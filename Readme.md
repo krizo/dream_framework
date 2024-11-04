@@ -191,6 +191,74 @@ Custom metrics are automatically stored in the database in json format and can b
 🔍 Problem investigation
 
 
+### 🌍 Environment Configuration
+
+The framework provides a flexible environment configuration system through the `TestEnvironment` class.
+Configure different test environments (dev, staging, prod) using YAML configuration:
+
+```python
+from core.environments import TestEnvironment
+
+# Direct usage
+env = TestEnvironment("production")
+hostname = env.get_property("hostname")
+db_config = env.get_property("database")
+
+# Or using environment variable
+# export TEST_ENVIRONMENT=staging
+env = TestEnvironment()  # Uses TEST_ENVIRONMENT value
+```
+
+Create strongly-typed configurations:
+
+```python
+@dataclass
+class DatabaseConfig:
+    server: str
+    name: str
+
+@dataclass
+class AppConfig:
+    hostname: str
+    database: DatabaseConfig
+    
+    @classmethod
+    def from_environment(cls, env_name: str) -> 'AppConfig':
+        env = TestEnvironment(env_name)
+        return cls(
+            hostname=env.get_property("hostname"),
+            database=DatabaseConfig(
+                server=env.get_property("database")["server"],
+                name=env.get_property("database")["name"]
+            )
+        )
+
+# Usage
+config = AppConfig.from_environment("production")
+print(f"Connecting to {config.database.server}...")
+```
+
+Configuration file (`config/environments.yml`):
+```yaml
+production:
+  hostname: foo.example.com
+  database:
+    server: db.example.com
+    name: myapp_prod
+
+staging:
+  hostname: staging.example.com
+  database:
+    server: db-staging.example.com
+    name: myapp_staging
+```
+
+Key features:
+- 📁 Central YAML configuration
+- 🔄 Auto-detection via `TEST_ENVIRONMENT`
+- 🏗️ Support for complex configuration structures
+- 🔒 Separation of sensitive datae
+
 ## 🚀 Getting Started
 
 1. Create your test case:
