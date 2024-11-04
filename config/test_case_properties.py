@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from enum import Enum
+
+from pydantic import BaseModel
 
 
 class PropertyInfo(BaseModel):
@@ -19,30 +20,13 @@ class PropertyInfo(BaseModel):
 
 class TestCaseProperties(Enum):
     """
-    Enumeration of test case properties.
+    Custom test case properties configuration.
 
     This enum defines the properties that can be set for a test case, including
     their names, types, and whether they are required.
+    Framework users can define their own properties here.
     """
     SCOPE = PropertyInfo(name="SCOPE", type=str, required=True)
     COMPONENT = PropertyInfo(name="COMPONENT", type=str, required=True)
     REQUEST_TYPE = PropertyInfo(name="REQUEST_TYPE", type=str, required=False)
     INTERFACE = PropertyInfo(name="INTERFACE", type=str, required=False)
-
-    @property
-    def type(self) -> type:
-        """
-        Get the type of the property.
-
-        @returns: The type of the property.
-        """
-        return self.value.type
-
-    @property
-    def required(self) -> bool:
-        """
-        Check if the property is required.
-
-        @returns: True if the property is required, False otherwise.
-        """
-        return self.value.required

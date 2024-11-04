@@ -6,20 +6,25 @@ from models.base_model import Base
 
 class CustomMetricModel(Base):
     """
-    Model representing a custom metric for a test case.
+    Model representing a custom metric associated with a test execution.
 
-    @param id: Unique identifier of the metric
-    @param test_case_id: Identifier of the associated test case
-    @param name: Name of the metric
-    @param value: Value of the metric (stored as JSON for type flexibility)
-    @param test_case: Associated test case
+    @param id: Unique identifier of the custom metric
+    @param test_execution_id: ID of the associated test execution
+    @param name: Name/identifier of the metric
+    @param value: Value of the metric (stored as JSON to support various data types)
+    @param test_execution: Reference to the associated test execution record
+
+    The value parameter can store various types of data:
+    - Simple types: numbers, strings, booleans
+    - Complex types: lists, dictionaries
+    - Custom data structures (serialized to JSON)
     """
-
     __tablename__ = 'custom_metrics'
 
     id = Column(Integer, primary_key=True)
-    test_case_id = Column(Integer, ForeignKey('test_cases.id'))
+    test_execution_id = Column(Integer, ForeignKey('test_execution_records.id'))
     name = Column(String)
     value = Column(JSON)
 
-    test_case = relationship("TestCaseModel", back_populates="custom_metrics")
+    test_execution = relationship("TestExecutionRecordModel", back_populates="custom_metrics")
+

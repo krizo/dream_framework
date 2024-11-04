@@ -2,3 +2,5 @@
 .idea/
 logs/
 *pycache*
+database_config.*
+*.db

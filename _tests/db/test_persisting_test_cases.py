@@ -1,15 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime
+from typing import Dict
 
-import pytest
-from _pytest.fixtures import FixtureRequest
-
-from config.test_case_properties import TestCaseProperties
 from core.automation_database import AutomationDatabase
 from core.test_case import TestCase
-from models.custom_metric_model import CustomMetricModel
-from models.test_case_model import TestCaseModel
+from core.test_execution_record import TestExecutionRecord
+from core.test_result import TestResult
 
-DIALECTS = {
+DIALECTS: Dict[str, Dict[str, any]] = {
     'mssql': {
         'date_format': '%Y-%m-%d %H:%M:%S.%f',
         'max_identifier_length': 128
@@ -29,299 +26,277 @@ DIALECTS = {
 }
 
 
-@pytest.fixture(params=DIALECTS.keys())
-def emulated_odbc_db(request) -> AutomationDatabase:
-    """
-    Fixture that creates an in-memory SQLite database emulating different ODBC dialects.
-
-    @param request: Pytest request object containing the database dialect parameter.
-    @return: An instance of AutomationDatabase emulating the specified ODBC dialect.
-    """
-    dialect = request.param
-    test_db = AutomationDatabase('sqlite:///:memory:', dialect=dialect)
-    test_db.create_tables()
-    return test_db
-
-
-@pytest.fixture(scope="module")
-def sqlite_db() -> AutomationDatabase:
-    """
-    Fixture that creates an in-memory SQLite database for testing.
-
-    @return: An instance of AutomationDatabase using SQLite.
-    """
-    test_db = AutomationDatabase('sqlite:///:memory:')
-    test_db.create_tables()
-    return test_db
-
-
-@pytest.fixture(scope="module", params=['mssql', 'oracle', 'mysql'])
-def emulated_odbc_db(request: pytest.FixtureRequest) -> AutomationDatabase:
-    """
-    Fixture that creates an in-memory SQLite database emulating different ODBC dialects.
-
-    @param request: Pytest request object containing the database dialect parameter.
-    @return: An instance of AutomationDatabase emulating the specified ODBC dialect.
-    """
-    test_db = AutomationDatabase('sqlite:///:memory:', dialect=request.param)
-    test_db.create_tables()
-    return test_db
-
-
-@pytest.fixture
-def test_case() -> TestCase:
-    """
-    Fixture that creates a sample TestCase instance for testing.
-
-    @return: An instance of TestCase with predefined properties.
-    """
-    return TestCase(name="Sample Test", description="This is a sample test", test_suite="Integration",
-                    scope="integration", component="database")
-
-
-def test_test_case_creation(test_case: TestCase):
-    """
-    Test the creation of a TestCase instance and verify its initial state.
-    """
-    assert test_case.test_name == "Sample Test"
-    assert test_case.test_description == "This is a sample test"
-    assert test_case.result is None
-    assert test_case.start_time is not None
-    assert test_case.end_time is None
-    assert len(test_case.custom_metrics) == 2
-    assert test_case.scope == "integration"
-    assert test_case.component == "database"
-
-
-def test_custom_metrics(test_case: TestCase):
-    """
-    Test the addition and retrieval of custom metrics in a TestCase.
-    """
-    initial_metrics_count = len(test_case.custom_metrics)
-    test_case.add_custom_metric("performance", 100)
-    test_case.add_custom_metric("coverage", 0.85)
-
-    assert len(test_case.custom_metrics) == initial_metrics_count + 2
-    assert {"name": "scope", "value": "integration"} in test_case.custom_metrics
-    assert {"name": "component", "value": "database"} in test_case.custom_metrics
-    assert {"name": "performance", "value": 100} in test_case.custom_metrics
-    assert {"name": "coverage", "value": 0.85} in test_case.custom_metrics
-
-
-def test_to_model(test_case: TestCase):
-    """
-    Test the conversion of a TestCase instance to a TestCaseModel.
-    """
-    test_case.start()
-    test_case.add_custom_metric("metric1", "value1")
-    test_case.end(False)
-
-    model = test_case.to_model()
-    assert isinstance(model, TestCaseModel)
-    assert model.test_name == test_case.test_name
-    assert model.test_description == test_case.test_description
-    assert model.result is False
-
-    expected_metrics_count = len(TestCaseProperties) + 1  # +1 for the additional custom metric
-    assert len(model.custom_metrics) == expected_metrics_count
-
-    metric_dict = {m.name: m.value for m in model.custom_metrics}
-    assert metric_dict["scope"] == "integration"
-    assert metric_dict["component"] == "database"
-    assert metric_dict["metric1"] == "value1"
-
+def test_basic_test_case_persistence(sqlite_db: AutomationDatabase, base_test_case: TestCase):
+    """Test basic test case persistence without executions."""
 
-def test_from_model(test_case: TestCase):
-    """
-    Test the creation of a TestCase instance from a TestCaseModel.
-    """
-    model = TestCaseModel(
-        test_name=test_case.test_name,
-        test_description=test_case.test_description,
-        test_suite=test_case.test_suite,
-        result=True,
-        start_time=datetime.now(),
-        end_time=datetime.now() + timedelta(seconds=10)
-    )
-
-    for prop in TestCaseProperties:
-        prop_name = prop.name.lower()
-        prop_value = getattr(test_case, prop_name, None)
-        if prop_value is not None:
-            model.custom_metrics.append(CustomMetricModel(name=prop_name, value=prop_value))
-
-    model.custom_metrics.append(CustomMetricModel(name="additional_metric", value="test_value"))
-
-    test_case_from_model = TestCase.from_model(model)
-    assert isinstance(test_case_from_model, TestCase)
-    assert test_case_from_model.test_name == test_case.test_name
-    assert test_case_from_model.test_description == test_case.test_description
-    assert test_case_from_model.test_suite == test_case.test_suite
-    assert test_case_from_model.result is True
-
-    for prop in TestCaseProperties:
-        prop_name = prop.name.lower()
-        assert getattr(test_case_from_model, prop_name) == getattr(test_case, prop_name)
-
-    assert any(metric["name"] == "additional_metric" and metric["value"] == "test_value"
-               for metric in test_case_from_model.custom_metrics)
-
-
-def test_sqlite_database_integration(sqlite_db: AutomationDatabase, test_case: TestCase):
-    """
-    Test the integration of TestCase with a SQLite database.
-
-    @param sqlite_db: The SQLite database fixture.
-    @param test_case: The TestCase fixture.
-    """
-    _test_database_integration(sqlite_db, test_case)
-
-
-def test_emulated_odbc_database_integration(emulated_odbc_db: AutomationDatabase, test_case: TestCase,
-                                            request: FixtureRequest):
-    """
-    Test the integration of TestCase with emulated ODBC databases.
-
-    @param emulated_odbc_db: The emulated ODBC database fixture.
-    @param test_case: The TestCase fixture.
-    @param request: Pytest request object for accessing current test parameters.
-    """
-    current_dialect = request.node.callspec.id
-
-    _test_database_integration(emulated_odbc_db, test_case)
-
-    dialect_test_case = TestCase(
-        name=f"Dialect Test for {current_dialect}",
-        description="Testing dialect-specific behaviors",
-        test_suite="Integration",
-        scope="dialect-test",
-        component="database"
-    )
-
-    test_date = datetime.now()
-    dialect_test_case.start_time = test_date
-    dialect_test_case.end_time = test_date + timedelta(seconds=1)
-
-    dialect_test_case.add_custom_metric("integer_metric", 42)
-    dialect_test_case.add_custom_metric("float_metric", 3.14)
-    dialect_test_case.add_custom_metric("string_metric", "test string")
-    dialect_test_case.add_custom_metric("bool_metric", True)
-
-    inserted_id = emulated_odbc_db.insert_test_case(dialect_test_case)
-    retrieved_test_case = emulated_odbc_db.fetch_test_case(inserted_id)
-
-    assert retrieved_test_case is not None
-    assert retrieved_test_case.start_time is not None
-    assert retrieved_test_case.end_time is not None
-
-    metrics_dict = {m["name"]: m["value"] for m in retrieved_test_case.custom_metrics}
-    assert isinstance(metrics_dict["integer_metric"], int)
-    assert isinstance(metrics_dict["float_metric"], float)
-    assert isinstance(metrics_dict["string_metric"], str)
-    assert isinstance(metrics_dict["bool_metric"], bool)
-
-    retrieved_test_case.add_custom_metric("new_metric", "added after retrieval")
-    update_success = emulated_odbc_db.update_test_case(retrieved_test_case)
-    assert update_success is True
-
-    updated_test_case = emulated_odbc_db.fetch_test_case(inserted_id)
-    assert updated_test_case is not None
-    assert any(m["name"] == "new_metric" and m["value"] == "added after retrieval"
-               for m in updated_test_case.custom_metrics)
-
-
-def _test_database_integration(db: AutomationDatabase, test_case: TestCase):
-    """
-    Helper function to test database integration for both SQLite and emulated ODBC databases.
-
-    @param db: The database fixture (either SQLite or emulated ODBC).
-    @param test_case: The TestCase fixture.
-    """
-    # Prepare the test case
-    assert test_case.id is not None
-    test_case.add_custom_metric("db_metric", "db_value")
-    test_case.end(True)
-
-    # Insert the test case
-    inserted_id = db.insert_test_case(test_case)
-    assert inserted_id is not None
-    assert test_case.id == inserted_id
-
-    # Retrieve the TestCase from the database
-    retrieved_test_case = db.fetch_test_case(inserted_id)
-
-    assert retrieved_test_case is not None
-    assert retrieved_test_case.id == inserted_id, f"Expected id {inserted_id}, but got {retrieved_test_case.id}"
-    assert retrieved_test_case.test_name == test_case.test_name
-    assert retrieved_test_case.test_description == test_case.test_description
-    assert retrieved_test_case.result is True
-
-    # Check TestCaseProperties
-    for prop in TestCaseProperties:
-        prop_name = prop.name.lower()
-        assert getattr(retrieved_test_case, prop_name) == getattr(test_case, prop_name)
-
-    # Check custom metric
-    assert any(metric["name"] == "db_metric" and metric["value"] == "db_value"
-               for metric in retrieved_test_case.custom_metrics)
-
-    # Test updating the test case
-    retrieved_test_case.test_name = "Updated Test Name"
-    update_success = db.update_test_case(retrieved_test_case)
-    assert update_success is True
-
-    # Fetch the updated test case
-    updated_test_case = db.fetch_test_case(inserted_id)
-    assert updated_test_case is not None
-    assert updated_test_case.id == inserted_id
-    assert updated_test_case.test_name == "Updated Test Name"
-
-
-def test_fetch_insert_update_test_case(sqlite_db: AutomationDatabase, test_case: TestCase):
-    """
-    Test fetching, inserting, and updating a TestCase using the new wrapper methods.
-
-    @param sqlite_db: The SQLite database fixture.
-    @param test_case: The TestCase fixture.
-    """
-    # Insert the test case
-    inserted_id = sqlite_db.insert_test_case(test_case)
-    assert inserted_id is not None
-
-    # Fetch the test case
-    fetched_test_case = sqlite_db.fetch_test_case(inserted_id)
-    assert fetched_test_case is not None
-    assert fetched_test_case.test_name == test_case.test_name
-    assert fetched_test_case.test_description == test_case.test_description
-
-    # Update the test case
-    fetched_test_case.test_name = "Updated Test Name"
-    update_success = sqlite_db.update_test_case(fetched_test_case)
-    assert update_success is True
-
-    # Fetch the updated test case
-    updated_test_case = sqlite_db.fetch_test_case(inserted_id)
-    assert updated_test_case is not None
-    assert updated_test_case.test_name == "Updated Test Name"
-
-
-def test_fetch_nonexistent_test_case(sqlite_db: AutomationDatabase, test_case: TestCase):
-    """
-    Test fetching a non-existent TestCase.
-
-    @param sqlite_db: The SQLite database fixture.
-    """
-    non_existent_test_case = sqlite_db.fetch_test_case(9999)  # Assuming 9999 is not a valid ID
-    assert non_existent_test_case is None
-
-
-def test_update_nonexistent_test_case(sqlite_db: AutomationDatabase, test_case: TestCase):
-    """
-    Test updating a non-existent TestCase.
-
-    @param sqlite_db: The SQLite database fixture.
-    @param test_case: The TestCase fixture.
-    """
-    test_case.id = -9999  # Assuming -9999 is not a valid ID
-    update_success = sqlite_db.update_test_case(test_case)
-    assert update_success is False
+    # Save test case
+    test_case_id = sqlite_db.insert_test_case(base_test_case)
+    assert test_case_id is not None, "Failed to insert test case"
+
+    # Retrieve and verify
+    retrieved = sqlite_db.fetch_test_case(test_case_id)
+    assert retrieved is not None, "Failed to retrieve test case"
+    assert retrieved.name == base_test_case.name, "Test case name mismatch"
+    assert retrieved.description == base_test_case.description, "Test case description mismatch"
+    assert retrieved.test_suite == base_test_case.test_suite, "Test suite mismatch"
+    assert retrieved.scope == base_test_case.scope, "Scope mismatch"
+    assert retrieved.component == base_test_case.component, "Component mismatch"
+
+
+def test_test_execution_persistence(sqlite_db, base_test_case):
+    """Test persisting and retrieving test execution record."""
+
+    # Insert test case first
+    test_case_id = sqlite_db.insert_test_case(base_test_case)
+    base_test_case.id = test_case_id
+
+    # Create execution record
+    execution = TestExecutionRecord(base_test_case)
+
+    # Add some metrics before initialization
+    execution.add_custom_metric("pre_init_metric", "value")
+
+    # Start execution
+    execution.start()
+
+    # Add more metrics
+    execution.add_custom_metric("post_init_metric", "value")
+
+    # Persist
+    execution_id = sqlite_db.insert_test_execution(execution)
+    assert execution_id is not None
+
+    # Make sure we store the execution ID
+    execution.id = execution_id
+
+    # Complete execution
+    execution.end(TestResult.PASSED)
+    sqlite_db.update_test_execution(execution)
+
+    # Retrieve using the correct ID
+    retrieved = sqlite_db.fetch_test_execution(execution_id)
+    assert retrieved is not None, f"Failed to retrieve execution record with ID {execution_id}"
+
+    # Verify retrieved data
+    assert retrieved.test_case.id == base_test_case.id
+    assert retrieved.test_case.name == base_test_case.name
+    assert retrieved.get_metric("pre_init_metric") == "value"
+    assert retrieved.get_metric("post_init_metric") == "value"
+    assert retrieved.is_completed
+    assert retrieved.is_successful
+
+
+def test_multiple_executions(sqlite_db: AutomationDatabase, base_test_case: TestCase):
+    """Test multiple executions of the same test case."""
+
+    # Save test case
+    test_case_id = sqlite_db.insert_test_case(base_test_case)
+    base_test_case.id = test_case_id
+
+    # Create multiple executions with different results
+    executions = []
+    for i in range(3):
+        execution = TestExecutionRecord(base_test_case)
+        execution.start()
+        execution.add_custom_metric("iteration", i + 1)
+        execution.add_custom_metric("data_size", (i + 1) * 100)
+        execution.end(TestResult.FAILED if i == 1 else TestResult.PASSED)  # Make second execution fail
+
+        execution_id = sqlite_db.insert_test_execution(execution)
+        executions.append(execution_id)
+
+    # Verify all executions
+    retrieved_executions = sqlite_db.fetch_executions_for_test(test_case_id)
+    assert len(retrieved_executions) == 3, "Wrong number of executions retrieved"
+
+    # Verify execution details
+    success_count = sum(1 for e in retrieved_executions if e.is_successful)
+    assert success_count == 2, "Wrong number of successful executions"
+
+
+def test_dialect_specific_features(emulated_odbc_db: AutomationDatabase, base_test_case: TestCase):
+    """Test database operations with different SQL dialects."""
+
+    # Save test case
+    test_case_id = emulated_odbc_db.insert_test_case(base_test_case)
+    base_test_case.id = test_case_id
+
+    # Create execution with various metric types
+    execution = TestExecutionRecord(base_test_case)
+    execution.start()
+
+    test_metrics = {
+        "int_value": 42,
+        "float_value": 3.14159,
+        "string_value": "test string",
+        "bool_value": True,
+        "list_value": [1, 2, 3],
+        "dict_value": {"key": "value"},
+        "date_value": datetime.now().isoformat()
+    }
+
+    for name, value in test_metrics.items():
+        execution.add_custom_metric(name, value)
+
+    execution.end(TestResult.PASSED)
+
+    # Save and verify
+    execution_id = emulated_odbc_db.insert_test_execution(execution)
+
+    retrieved = emulated_odbc_db.fetch_test_execution(execution_id)
+    assert retrieved is not None, "Failed to retrieve test execution"
+
+    for name, value in test_metrics.items():
+        assert retrieved.get_metric(name) == value, f"Metric {name} mismatch"
+
+
+def test_error_cases(sqlite_db: AutomationDatabase, base_test_case: TestCase):
+    """Test error handling in database operations."""
+
+    # Test fetching non-existent test case
+    assert sqlite_db.fetch_test_case(9999) is None, "Should return None for non-existent test case"
+
+    # Test fetching non-existent execution
+    assert sqlite_db.fetch_test_execution(9999) is None, "Should return None for non-existent execution"
+
+    # Test updating non-existent test case
+    base_test_case.id = 9999
+    assert not sqlite_db.update_test_case(base_test_case), "Should return False for non-existent test case update"
+
+    # Test updating non-existent execution
+    execution = TestExecutionRecord(base_test_case)
+    execution.id = 9999
+    assert not sqlite_db.update_test_execution(execution), "Should return False for non-existent execution update"
+
+
+def test_execution_metrics_update(sqlite_db: AutomationDatabase, base_test_case: TestCase):
+    """Test updating test execution metrics."""
+
+    # Save test case
+    test_case_id = sqlite_db.insert_test_case(base_test_case)
+    base_test_case.id = test_case_id
+
+    # Create initial execution with metrics
+    execution = TestExecutionRecord(base_test_case)
+    execution.start()
+
+    # Add initial metrics
+    execution.add_custom_metric("metric1", "initial_value")
+    execution.add_custom_metric("metric2", "value2")
+
+    # Save initial execution
+    execution_id = sqlite_db.insert_test_execution(execution)
+
+    # Verify initial state
+    initial = sqlite_db.fetch_test_execution(execution_id)
+    assert initial.get_metric("metric1") == "initial_value", "Initial metric1 not set correctly"
+    assert initial.get_metric("metric2") == "value2", "Initial metric2 not set correctly"
+
+    # Update execution with ONLY the metrics we want to keep
+    retrieved = sqlite_db.fetch_test_execution(execution_id)
+    retrieved._metrics.clear()  # Clear all existing metrics
+
+    # Re-add test case properties
+    retrieved._add_test_case_metrics()
+
+    # Add only the metrics we want
+    retrieved.add_custom_metric("metric1", "updated_value")
+    retrieved.add_custom_metric("metric3", "new_value")
+
+    # Save updates
+    success = sqlite_db.update_test_execution(retrieved)
+    assert success is True, "Failed to update execution"
+
+    # Fetch and verify final state
+    final = sqlite_db.fetch_test_execution(execution_id)
+    assert final is not None, "Failed to retrieve updated execution"
+
+    # Check each metric individually and log the values
+    metric1 = final.get_metric("metric1")
+    metric2 = final.get_metric("metric2")
+    metric3 = final.get_metric("metric3")
+
+    assert metric1 == "updated_value", f"metric1 should be 'updated_value', got {metric1}"
+    assert metric2 is None, f"metric2 should be None, got {metric2}"
+    assert metric3 == "new_value", f"metric3 should be 'new_value', got {metric3}"
+
+
+def test_complex_metrics(sqlite_db: AutomationDatabase, base_test_case: TestCase):
+    """Test handling of complex metric types."""
+
+    # Save test case
+    test_case_id = sqlite_db.insert_test_case(base_test_case)
+    base_test_case.id = test_case_id
+
+    # Create execution with complex metrics
+    execution = TestExecutionRecord(base_test_case)
+    execution.start()
+
+    complex_metrics = {
+        "nested_dict": {
+            "key1": {
+                "subkey1": "value1",
+                "subkey2": 42
+            },
+            "key2": [1, 2, 3]
+        },
+        "list_of_dicts": [
+            {"name": "item1", "value": 100},
+            {"name": "item2", "value": 200}
+        ],
+        "mixed_data": {
+            "string": "test",
+            "number": 42,
+            "boolean": True,
+            "null_value": None,
+            "list": [1, "two", 3.0],
+        }
+    }
+
+    for name, value in complex_metrics.items():
+        execution.add_custom_metric(name, value)
+
+    # Save and verify
+    execution_id = sqlite_db.insert_test_execution(execution)
+
+    retrieved = sqlite_db.fetch_test_execution(execution_id)
+    assert retrieved is not None, "Failed to retrieve execution"
+
+    for name, value in complex_metrics.items():
+        assert retrieved.get_metric(name) == value, f"Complex metric {name} mismatch"
+
+
+def test_long_execution_updates(sqlite_db: AutomationDatabase, base_test_case: TestCase):
+    """Test multiple updates during a long execution."""
+
+    # Save test case
+    test_case_id = sqlite_db.insert_test_case(base_test_case)
+    base_test_case.id = test_case_id
+
+    # Start execution
+    execution = TestExecutionRecord(base_test_case)
+    execution.start()
+    execution_id = sqlite_db.insert_test_execution(execution)
+
+    # Simulate multiple updates during execution
+    updates = [
+        {"progress": 25, "memory_usage": 100, "status": "initializing"},
+        {"progress": 50, "memory_usage": 150, "status": "processing"},
+        {"progress": 75, "memory_usage": 200, "status": "finalizing"},
+        {"progress": 100, "memory_usage": 180, "status": "completed"}
+    ]
+
+    for update_data in updates:
+        retrieved = sqlite_db.fetch_test_execution(execution_id)
+        for name, value in update_data.items():
+            retrieved.add_custom_metric(name, value)
+
+        success = sqlite_db.update_test_execution(retrieved)
+        assert success is True, f"Failed to update execution at progress {update_data['progress']}%"
+
+    # Verify final state
+    final = sqlite_db.fetch_test_execution(execution_id)
+    assert final is not None, "Failed to retrieve final execution state"
+
+    for name, value in updates[-1].items():
+        assert final.get_metric(name) == value, f"Final metric {name} mismatch"

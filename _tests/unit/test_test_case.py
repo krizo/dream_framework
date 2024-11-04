@@ -1,97 +1,206 @@
-from datetime import datetime
-
 import pytest
 
-from core.test_case import TestCase, TestCasePropertyError
+from core.exceptions import (
+    RequiredPropertyError,
+    InvalidPropertyError,
+    PropertyValidationError,
+    TestCaseError
+)
+from core.test_case import TestCase
 
 
-class ConcreteTestCase(TestCase):
-    @property
-    def test_suite(self) -> str:
-        return "Concrete Test Suite"
+def test_test_case_initialization(base_test_case):
+    """
+    Test basic TestCase initialization with required properties.
+
+    @param base_test_case: Basic TestCase fixture
+    """
+    assert base_test_case.name == "Sample Test"
+    assert base_test_case.description == "Sample test description"
+    assert base_test_case.test_suite == "Sample Suite"
+    assert base_test_case.scope == "integration"
+    assert base_test_case.component == "database"
+    assert base_test_case.id is not None
+    assert base_test_case.test_id is not None
 
 
-@pytest.fixture
-def test_case():
-    return ConcreteTestCase(scope="Backend", component="API")
+def test_required_properties(base_test_case):
+    """
+    Test handling of required properties validation.
+
+    @raises RequiredPropertyError: When required property is missing
+    """
+    # Test missing scope
+    with pytest.raises(RequiredPropertyError) as exc_info:
+        TestCase(
+            name="Test",
+            component="API"
+        )
+    assert exc_info.value.property_name == "SCOPE"
+
+    # Test missing component
+    with pytest.raises(RequiredPropertyError) as exc_info:
+        TestCase(
+            name="Test",
+            scope="Unit"
+        )
+    assert exc_info.value.property_name == "COMPONENT"
+
+    # Valid initialization should not raise
+    TestCase(
+        name="Test",
+        scope="Unit",
+        component="API"
+    )
 
 
-def test_test_case_initialization(test_case):
-    assert test_case.test_suite == "Concrete Test Suite"
-    assert test_case.scope == "Backend"
-    assert test_case.component == "API"
+def test_invalid_property(base_test_case):
+    """
+    Test handling of invalid property names.
+
+    @raises InvalidPropertyError: When invalid property name is provided
+    """
+    with pytest.raises(InvalidPropertyError) as exc_info:
+        TestCase(
+            name="Test",
+            scope="Unit",
+            component="API",
+            invalid_property="Value"
+        )
+    assert exc_info.value.property_name == "invalid_property"
+    assert "Valid properties are:" in str(exc_info.value)
 
 
-def test_only_required_properties_positive():
-    test_case = ConcreteTestCase(scope="Backend", component="API")
-    assert test_case, "Failed to initialize ConcreteTestCase with only required fields"
+def test_property_validation(base_test_case):
+    """
+    Test property type validation.
+
+    @raises PropertyValidationError: When property value has invalid type
+    """
+    # Test invalid scope type
+    with pytest.raises(PropertyValidationError) as exc_info:
+        TestCase(
+            name="Test",
+            scope=123,  # Should be string
+            component="API"
+        )
+    assert exc_info.value.property_name == "SCOPE"
+    assert exc_info.value.details["expected_type"] == "str"
+    assert exc_info.value.details["actual_type"] == "int"
+
+    # Test invalid component type
+    with pytest.raises(PropertyValidationError) as exc_info:
+        TestCase(
+            name="Test",
+            scope="Unit",
+            component=["API"]  # Should be string
+        )
+    assert exc_info.value.property_name == "COMPONENT"
+    assert exc_info.value.details["expected_type"] == "str"
+    assert exc_info.value.details["actual_type"] == "list"
 
 
-def test_required_properties_negative():
-    with pytest.raises(TestCasePropertyError):
-        ConcreteTestCase(scope="Backend")  # Missing 'component'
+def test_optional_properties(base_test_case):
+    """
+    Test handling of optional properties.
+
+    @param base_test_case: Basic TestCase fixture
+    """
+    test_case = TestCase(
+        name="Test",
+        scope="Unit",
+        component="API",
+        request_type="GET",
+        interface="REST"
+    )
+
+    assert test_case.request_type == "GET"
+    assert test_case.interface == "REST"
+
+    # Optional properties should be None if not provided
+    assert base_test_case.request_type is None
+    assert base_test_case.interface is None
 
 
-def test_not_specified_properties_negative():
-    with pytest.raises(TestCasePropertyError):
-        ConcreteTestCase(scope="Backend", component="API", invalid_property='foo')
+def test_test_location(base_test_case):
+    """Test setting and getting test location information."""
+    test_case = TestCase(
+        name="Test",
+        scope="Unit",
+        component="API"
+    )
+
+    test_case.set_test_location("tests/test_api.py", "test_endpoint")
+
+    assert test_case.test_module == "tests/test_api.py"
+    assert test_case.test_function == "test_endpoint"
+    assert test_case.test_id == "tests/test_api.py::test_endpoint"
 
 
-def test_optional_properties():
-    test_case = ConcreteTestCase(scope="Unit", component="API", request_type="GET", interface="REST")
-    assert test_case.scope == "Unit", "Failed to initialize ConcreteTestCase with optional fields"
-    assert test_case.interface == "REST", "Failed to initialize ConcreteTestCase with optional fields"
+def test_get_properties(base_test_case):
+    """
+    Test getting all test case properties.
+
+    @param base_test_case: Basic TestCase fixture
+    """
+    base_test_case.set_test_location("module.py", "test_func")
+
+    properties = base_test_case.get_properties()
+
+    # Check required properties
+    assert properties["name"] == "Sample Test"
+    assert properties["scope"] == "integration"
+    assert properties["component"] == "database"
+
+    # Check test location properties
+    assert properties["test_id"] == "module.py::test_func"
+    assert properties["test_module"] == "module.py"
+    assert properties["test_function"] == "test_func"
+
+    # Optional properties should not be included if None
+    assert "request_type" not in properties
+    assert "interface" not in properties
 
 
-def test_property_type_checking_negative():
-    with pytest.raises(TypeError):
-        ConcreteTestCase(scope=123, component="API")
+def test_model_conversion(base_test_case):
+    """
+    Test conversion between TestCase and TestCaseModel.
+
+    @param base_test_case: Basic TestCase fixture
+    @raises TestCaseError: When converting to model without test_id
+    """
+    invalid_test_case = TestCase(
+            name="Test",
+            scope="Unit",
+            component="API",
+        )
+    # Test conversion without test_id
+    with pytest.raises(TestCaseError) as exc:
+        invalid_test_case.to_model()
+
+    # Set test location and try again
+    base_test_case.set_test_location("module.py", "test_func")
+    model = base_test_case.to_model()
+
+    assert model.name == base_test_case.name
+    assert model.test_id == base_test_case.test_id
+
+    # Test conversion back to TestCase
+    new_case = TestCase.from_model(model)
+    assert new_case.name == base_test_case.name
+    assert new_case.test_id == base_test_case.test_id
 
 
-def test_to_dict():
-    test_case = ConcreteTestCase(name="Test Name", description="Test Description", scope="Unit", component="API",
-                                 request_type="GET", interface="REST")
-    test_case.start_time = datetime(2023, 1, 1, 12, 0, 0)
-    test_case.end_time = datetime(2023, 1, 1, 12, 0, 10)
-    test_case.duration = 10.0
+def test_user_stories(base_test_case):
+    """Test handling of user stories property."""
+    stories = ["US-123", "US-456"]
+    test_case = TestCase(
+        name="Test",
+        scope="Unit",
+        component="API",
+        user_stories=stories
+    )
 
-    test_dict = test_case.to_dict()
-
-    assert test_dict['test_name'] == "Test Name"
-    assert test_dict['test_description'] == "Test Description"
-    assert test_dict['test_suite'] == "Concrete Test Suite"
-    assert test_dict['request_type'] == "GET"
-    assert test_dict['component'] == "API"
-    assert test_dict['scope'] == "Unit"
-    assert test_dict['start_time'] == "2023-01-01T12:00:00"
-    assert test_dict['end_time'] == "2023-01-01T12:00:10"
-    assert test_dict['duration'] == 10.0
-
-
-def test_set_result_and_callbacks_end(test_case):
-    success_called = False
-
-    def on_success():
-        """ Function to be called after test is successful """
-        nonlocal success_called
-        success_called = True
-
-    test_case.on_test_case_end_callback(on_success)
-    test_case.set_result(True)  # test passed
-
-    assert success_called, "on_success() wasn't called after test passed successfully "
-
-
-def test_extend_test_name_with_test_function_param(test_case):
-    assert not test_case.extend_test_name_with_test_function_param
-
-
-def test_user_stories_none(test_case):
-    assert test_case.user_stories is None, "Initialize TestCase with no User Stories"
-
-
-def test_user_stories_true(test_case):
-    test_case = ConcreteTestCase(name="Test with Stories", description="Test Description", component="API",
-                                 scope='Backend', user_stories=[12345, 'https://example.com/123'])
-    assert test_case.user_stories == [12345,
-                                      'https://example.com/123'], "Initialize TestCase with specific User Stories"
+    assert test_case.user_stories == stories
+    assert "user_stories" in test_case.get_properties()
+    assert test_case.get_properties()["user_stories"] == stories

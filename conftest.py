@@ -1,8 +1,7 @@
 import shutil
 from pathlib import Path
 
-import pytest
-
+from _tests.fixtures import *
 from core.logger import Log
 from core.plugins.test_case_plugin import TestCasePlugin
 
@@ -40,6 +39,9 @@ def pytest_configure(config):
 
     # Register plugins
     config.pluginmanager.register(TestCasePlugin())
+    config.addinivalue_line(
+        "markers", "no_database_plugin: mark test to disable database plugin"
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -51,3 +53,4 @@ def reset_step_counter():
     """
     Log.reset_step_counter()
     yield
+

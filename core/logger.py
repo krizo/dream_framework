@@ -5,7 +5,7 @@ from typing import Optional
 # Custom log levels
 STEP_LEVEL = 35
 CONSOLE_LEVEL = 15  # Between DEBUG and INFO
-EMPTY_LEVEL = 11  # Be
+EMPTY_LEVEL = 11
 logging.addLevelName(STEP_LEVEL, "STEP")
 logging.addLevelName(CONSOLE_LEVEL, "CONSOLE")
 logging.addLevelName(EMPTY_LEVEL, "EMPTY")
@@ -37,13 +37,14 @@ class LogLevel(Enum):
 class MultiFormatter(logging.Formatter):
     """
     Formatter that applies different formats based on the log level.
-    
+
     @param fmt: str - Message format string
     @param datefmt: str - Date format string
     @param style: str - Format style
     @param validate: bool - Whether to validate the format string
     @return str - The formatted message
     """
+
     def __init__(self, fmt=None, datefmt=None, style='%', validate=True):
         super().__init__(fmt, datefmt, style, validate)
         self.default_formatter = logging.Formatter(
@@ -103,17 +104,83 @@ class Log:
     """
     _instance: Optional[logging.Logger] = None
     _step_counter: int = 0
+    _initialized: bool = False
+
+    @classmethod
+    def _initialize(cls):
+        """
+        Initialize logger with proper configuration.
+        Sets up console and file handlers with correct filters and formatters.
+        Should be called only once.
+        """
+        if cls._initialized:
+            return
+
+        # Create or get logger instance
+        logger = logging.getLogger("TestLogger")
+        logger.setLevel(logging.DEBUG)
+
+        if logger.handlers:
+            logger.handlers.clear()
+
+        # Create and configure console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(MultiFormatter())
+        console_handler.addFilter(ConsoleFilter())
+        console_handler.setLevel(CONSOLE_LEVEL)
+        logger.addHandler(console_handler)
+
+        logger.propagate = False  # Don't propagate logs to other loggers (like root)
+        cls._instance = logger
+        cls._initialized = True
 
     @classmethod
     def _get_logger(cls) -> logging.Logger:
         """
-        Get or create logger instance.
+        Get or create logger instance with proper configuration.
 
-        @return logging.Logger - Configured logger instance
+        @return: Configured logger instance
         """
-        if cls._instance is None:
-            cls._instance = logging.getLogger("TestLogger")
+        if not cls._initialized:
+            cls._initialize()
         return cls._instance
+
+    @classmethod
+    def reconfigure_file_handler(cls, log_file: str):
+        """
+        Reconfigure file handler with new log file.
+        Used when fileConfig is called with new log file path.
+
+        @param log_file: Path to log file
+        @return: None
+        """
+        logger = cls._get_logger()
+
+        # Remove old file handlers
+        for handler in logger.handlers[:]:
+            if isinstance(handler, logging.FileHandler):
+                logger.removeHandler(handler)
+
+        # Create and configure new file handler
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(MultiFormatter())
+        file_handler.addFilter(FileFilter())
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+    @classmethod
+    def reset(cls):
+        """
+        Reset logger to initial state.
+        Useful for testing and reconfiguration.
+
+        @return: None
+        """
+        if cls._instance:
+            cls._instance.handlers.clear()
+        cls._instance = None
+        cls._initialized = False
+        cls._step_counter = 0
 
     @classmethod
     def _log(cls, level: LogLevel, message: str, *args, **kwargs):
@@ -176,14 +243,12 @@ class Log:
         cls._log(LogLevel.WARNING, message)
 
     @classmethod
-    def error(cls, message: str, exception: Exception = ''):
+    def error(cls, message: str):
         """
         Log error message.
 
         @param message: str - Error message to be logged
-        @param exception: exception to be logged
         """
-        message += f": {str(exception)}"
         cls._log(LogLevel.ERROR, message)
 
     @classmethod
