@@ -132,7 +132,7 @@ def test_log_levels(tmp_path, dummy_test_case):
     assert test_messages["warning"] in content, "Warning message not found"
     assert test_messages["error"] in content, "Error message not found"
     assert test_messages["critical"] in content, "Critical message not found"
-    assert f"Step 1: {test_messages['step']}" in content, "Step message not found"
+    assert f"{test_messages['step']}" in content, "Step message not found"
 
     # File should not contain these messages
     assert test_messages["debug"] not in content, "Debug message should not be in file"
@@ -168,9 +168,9 @@ def test_step_counter(tmp_path, dummy_test_case):
 
     # Verify log content
     content = test_log.read_text()
-    assert "Step 1: First step" in content
-    assert "Step 2: Second step" in content
-    assert "Step 3: Third step" in content
+    assert "First step" in content
+    assert "Second step" in content
+    assert "Third step" in content
 
     # Test reset
     Log.reset_step_counter()

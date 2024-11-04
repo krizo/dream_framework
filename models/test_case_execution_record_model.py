@@ -1,4 +1,3 @@
-# test_execution_record_model.py
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 
@@ -23,6 +22,7 @@ class TestExecutionRecordModel(Base):
     @param environment: Environment in which the test was executed
     @param test_case: Reference to the associated test case
     @param custom_metrics: List of custom metrics recorded during execution
+    @param steps: List of steps executed during the test
     """
     __tablename__ = 'test_execution_records'
 
@@ -44,3 +44,5 @@ class TestExecutionRecordModel(Base):
     test_case = relationship("TestCaseModel", back_populates="executions")
     custom_metrics = relationship("CustomMetricModel", back_populates="test_execution",
                                   cascade="all, delete-orphan")
+    steps = relationship("StepModel", back_populates="execution_record",
+                         cascade="all, delete-orphan")

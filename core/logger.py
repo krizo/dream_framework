@@ -231,7 +231,7 @@ class Log:
         @param message: str - Step description to be logged
         """
         cls._step_counter += 1
-        cls._log(LogLevel.STEP, f"Step {cls._step_counter}: {message}")
+        cls._log(LogLevel.STEP, f"{message}")
 
     @classmethod
     def warning(cls, message: str):

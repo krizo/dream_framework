@@ -1,12 +1,13 @@
 import logging
 import logging.config
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 
 import pytest
 
 from core.automation_database_manager import AutomationDatabaseManager
 from core.logger import Log
+from core.step import Step
 from core.test_case import TestCase
 from core.test_execution_record import TestExecutionRecord
 from core.test_result import TestResult
@@ -23,6 +24,31 @@ class TestCasePlugin:
     Ensures unique test cases based on module and function location.
     """
     _test_executions: Dict[str, TestExecutionRecord] = {}
+
+    _test_executions: Dict[str, TestExecutionRecord] = {}
+    _executions_by_worker: Dict[str, TestExecutionRecord] = {}
+
+    @classmethod
+    def get_current_execution(cls) -> Optional[TestExecutionRecord]:
+        """Get current test execution for this worker."""
+        try:
+            worker = pytest.xdist.get_worker_id()
+            worker_id = worker if worker else 'master'
+        except (ImportError, AttributeError):
+            worker_id = 'master'
+
+        return cls._executions_by_worker.get(worker_id)
+
+    @classmethod
+    def set_current_execution(cls, execution: TestExecutionRecord):
+        """Set current test execution for this worker."""
+        try:
+            worker = pytest.xdist.get_worker_id()
+            worker_id = worker if worker else 'master'
+        except (ImportError, AttributeError):
+            worker_id = 'master'
+
+        cls._executions_by_worker[worker_id] = execution
 
     @staticmethod
     def _find_test_case_fixture(item) -> TestCase:
@@ -61,6 +87,10 @@ class TestCasePlugin:
             disable_existing_loggers=False
         )
 
+    def pytest_runtest_setup(self, item):
+        """Setup test execution - reset steps."""
+        Step.reset_worker()
+
     def pytest_runtest_call(self, item):
         """
         Hook executed before test execution.
@@ -72,10 +102,10 @@ class TestCasePlugin:
         """
         if item.get_closest_marker('no_database_plugin'):
             return
+
         test_full_path = item.nodeid
         test_module, test_function = test_full_path.split('::')
 
-        # Get and validate TestCase
         test_case = self._find_test_case_fixture(item)
         test_case.set_test_location(test_module, test_function)
 
@@ -85,10 +115,12 @@ class TestCasePlugin:
         # Create execution record
         execution_record = TestExecutionRecord(test_case)
         test_case.set_execution_record(execution_record)
-        execution_record.set_test_location(test_module, test_function, test_case.name, test_case.description)
+        execution_record.set_test_location(test_module, test_function,
+                                         test_case.name, test_case.description)
         execution_record.start()
 
         self._test_executions[test_full_path] = execution_record
+        self.set_current_execution(execution_record)
 
         try:
             db = AutomationDatabaseManager.get_database()
@@ -97,7 +129,7 @@ class TestCasePlugin:
             existing_test = db.fetch_test_case_by_test_id(test_case.test_id)
             if existing_test:
                 test_case.id = existing_test.id
-                Log.info(f"Using test case ID: {test_case.id}")
+
                 # Update existing test case if needed
                 if self._should_update_test_case(existing_test, test_case):
                     db.update_test_case(test_case)
@@ -113,6 +145,11 @@ class TestCasePlugin:
         except Exception as e:
             Log.error(f"Error persisting test data: {str(e)}")
             raise
+
+    def pytest_runtest_teardown(self, item):
+        """Cleanup after test execution."""
+        Step.reset_worker()
+        self.set_current_execution(None)
 
     @staticmethod
     def _should_update_test_case(existing: TestCase, current: TestCase) -> bool:
@@ -142,6 +179,7 @@ class TestCasePlugin:
         report = outcome.get_result()
 
         if call.when == "call":
+
             test_full_path = item.nodeid
             execution_record = self._test_executions.get(test_full_path)
 

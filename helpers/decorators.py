@@ -1,12 +1,15 @@
 """
 Decorators module providing test automation specific decorators.
 """
+import inspect
 import time
 from datetime import datetime
 from functools import wraps
 from typing import Callable, Optional, Type, Tuple, Any
 
 from core.logger import Log
+from core.plugins.test_case_plugin import TestCasePlugin
+from core.step import Step, step_start
 
 
 class WaitTimeoutError(Exception):
@@ -15,8 +18,9 @@ class WaitTimeoutError(Exception):
 
 
 def wait_until(*args, timeout: float = 10, interval: float = 0.5,
-               ignored_exceptions: Optional[Tuple[Type[Exception], ...]] = None, error_message: Optional[str] = None
-) -> Callable:
+               ignored_exceptions: Optional[Tuple[Type[Exception], ...]] = None,
+               error_message: Optional[str] = None,
+               reset_logs: bool = False) -> Callable:
     """
     Decorator that retries a function until it succeeds or timeout is reached.
     Handles both assertion errors and specified exceptions.
@@ -25,6 +29,7 @@ def wait_until(*args, timeout: float = 10, interval: float = 0.5,
     @param interval: Sleep interval between retries in seconds (default: 0.5)
     @param ignored_exceptions: Tuple of exception types to ignore until timeout
     @param error_message: Custom error message for timeout
+    @param reset_logs: Whether to reset step counter for each retry (default: False)
     @return: Decorated function
     @raises: Last caught exception if timeout is reached
 
@@ -65,7 +70,19 @@ def wait_until(*args, timeout: float = 10, interval: float = 0.5,
 
             while True:
                 try:
-                    Log.debug(f"Attempt {attempt} for {func.__name__}")
+                    if reset_logs and attempt > 1:
+                        Log.debug(f"Resetting steps for attempt {attempt}")
+                        # Store current execution before reset
+                        current_execution = TestCasePlugin.get_current_execution()
+
+                        # Reset all step data
+                        Step.reset_for_test()
+                        Log.reset_step_counter()
+
+                        # Restore execution record
+                        TestCasePlugin.set_current_execution(current_execution)
+
+                    Log.debug(f"Starting attempt {attempt} for {func.__name__}")
                     result = func(*args_, **kwargs_)
 
                     # If function returns something explicitly, return that value
@@ -107,3 +124,51 @@ def wait_until(*args, timeout: float = 10, interval: float = 0.5,
     if len(args) == 1 and callable(args[0]):
         return _wait_until(args[0])
     return _wait_until
+
+
+def step(func: Optional[Callable] = None, *, content: Optional[str] = None) -> Callable:
+    """
+    Decorator to mark function as a step.
+    Can be used with or without parameters.
+
+    @param func: Function to decorate
+    @param content: Optional step description template. Can include {param} placeholders
+    @return: Decorated function
+    """
+
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            # Get current step before starting new one
+
+            if content:
+                try:
+                    # Combine positional and keyword arguments for formatting
+                    format_args = {}
+                    if args:
+                        # Get function parameter names
+                        sig = inspect.signature(f)
+                        param_names = list(sig.parameters.keys())
+                        # Map positional args to their parameter names
+                        format_args.update(zip(param_names, args))
+                    format_args.update(kwargs)
+
+                    step_content = content.format(**format_args)
+                except (KeyError, IndexError):
+                    # If formatting fails, use content as it is
+                    step_content = content
+            else:
+                step_content = f.__name__.replace('_', ' ').title()
+
+            # Get the actual function name for step_function
+            actual_function = f.__name__
+
+            with step_start(step_content, function_name=actual_function):
+                result = f(*args, **kwargs)
+                return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    return decorator(func)
