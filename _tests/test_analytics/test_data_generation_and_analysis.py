@@ -14,6 +14,7 @@ from models.test_case_model import TestCaseModel
 
 pytestmark = pytest.mark.no_database_plugin
 
+
 @pytest.fixture
 def test_db():
     """Create in-memory database for testing."""

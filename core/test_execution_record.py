@@ -14,7 +14,7 @@ from models.test_case_execution_record_model import TestExecutionRecordModel
 class MetricValue:
     """
     Represents a single metric for Custom Metrics.
-    
+
     @param name: Name of the metric
     @param value: Value of the metric (can be any serializable type)
     """

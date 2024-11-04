@@ -425,6 +425,37 @@ def test_with_parameters(param_test):
     param_test.add_custom_metric("parameter", param_test.parameter)
 ```
 
+## wait_until Decorator
+
+The framework includes a powerful `wait_until` decorator for handling retry scenarios in tests:
+
+```commandline
+from helpers.decorators import wait_until
+
+@wait_until(timeout=10, interval=0.5)
+def check_condition():
+    return element.is_displayed()
+
+@wait_until(
+    timeout=5,
+    interval=0.1,
+    ignored_exceptions=(ValueError, TypeError),
+    error_message="Custom error message"
+)
+def custom_check():
+    return validate_something()
+```
+
+#### Decorator Parameters
+
+`timeout`: Maximum time to wait in seconds (default: 10)
+`interval`: Time between retries in seconds (default: 0.5)
+`ignored_exceptions`: Tuple of exception types to ignore until timeout
+`error_message`: Custom error message for timeout
+
+#### Default Handled Exceptions
+
+For now the only ignored exception in `wait_until` is `AssertionError`.
 
 ## Logging System
 
