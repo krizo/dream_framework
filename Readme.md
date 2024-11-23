@@ -28,6 +28,48 @@ A comprehensive Python testing framework designed for scalable, maintainable, an
 * 🔄 Parallel test execution support (pytest-xdist)
 
 
+## ⚙️ Configuration
+The framework uses a flexible configuration system based on config.ini files. Key configuration features include:
+
+### 🔄 wait_until Decorator Settings
+```ini
+[WAIT_UNTIL]
+# Default exceptions to be ignored during wait_until execution
+default_exceptions = ["builtins.AssertionError"]
+# Default timeout in seconds
+default_timeout = 10
+# Default interval between retries in seconds
+default_interval = 0.5
+```
+
+### 🎯 Test Case Properties
+```ini
+[TEST_CASE]
+# Required properties for all test cases
+required_properties = ["scope", "component"]
+# Valid test scope values
+valid_scopes = ["unit", "integration", "e2e", "system"]
+```
+
+### The configuration system supports:
+
+* 📖 Readable structure (sections)
+* 🔄 Automatic reloading
+* 💾 Value caching
+* 🛡️ Fallback to defaults
+* 🧩 Extensible sections
+
+Example usage with wait_until:
+```python
+@wait_until(timeout=5, interval=0.1)  # Override defaults
+def wait_for_service():
+    assert service.is_running, "Service should be running"
+
+@wait_until()  # Use defaults from config
+def check_health():
+    assert service.is_healthy, "Service should be healthy"
+```
+
 ## 🧩 Components
 
 ### TestCase
@@ -189,6 +231,7 @@ Custom metrics are automatically stored in the database in json format and can b
 📈 Performance trend monitoring
 💰 Processing cost analysis
 🔍 Problem investigation
+
 
 
 ### 🌍 Environment Configuration

@@ -1,11 +1,12 @@
 from typing import Optional, List, Dict, Any
 
 from config.test_case_properties import TestCaseProperties
+from core.configuration.test_case_config import TestCaseConfig
 from core.exceptions import (
     InvalidPropertyError,
     RequiredPropertyError,
     PropertyValidationError,
-    TestCaseError
+    TestCaseError, InvalidScopeError
 )
 from core.logger import Log
 from models.test_case_model import TestCaseModel
@@ -29,6 +30,15 @@ class TestCase:
         @raises TestCasePropertyError: If required properties are missing or invalid
         @raises PropertyValidationError: If property values have invalid types
         """
+        self._config = TestCaseConfig()
+
+        # Validate scope if present in properties
+        if 'scope' in properties:
+            scope = properties['scope']
+            valid_scopes = self._config.get_valid_scopes()
+            if not self._config.validate_scope(scope):
+                raise InvalidScopeError(scope, valid_scopes)
+
         # Standard properties - built into framework
         self.id: Optional[int] = None
 
