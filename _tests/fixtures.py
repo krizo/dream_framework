@@ -1,12 +1,13 @@
 import os
 import tempfile
 from typing import Generator
+from unittest.mock import patch
 
 import pytest
 
 from core.automation_database import AutomationDatabase
-from core.automation_database_manager import AutomationDatabaseManager
 from core.test_case import TestCase
+from core.test_run import TestRun
 from models.base_model import Base
 
 DIALECTS = {
@@ -49,7 +50,7 @@ def db_path() -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function")
-def sqlite_db() -> AutomationDatabase:
+def sqlite_db() -> "AutomationDatabase":
     """
     Provide clean SQLite database for testing.
     Recreates all tables for each test to ensure clean state.
@@ -57,6 +58,7 @@ def sqlite_db() -> AutomationDatabase:
     @return: AutomationDatabase instance
     """
     # Create new in-memory database
+    from core.automation_database import AutomationDatabase
     test_db = AutomationDatabase('sqlite:///:memory:')
 
     # Drop all tables if they exist
@@ -66,45 +68,6 @@ def sqlite_db() -> AutomationDatabase:
     Base.metadata.create_all(test_db.engine)
 
     return test_db
-
-
-@pytest.fixture(params=DIALECTS.keys())
-def emulated_odbc_db(request) -> AutomationDatabase:
-    """
-    Provide database instance emulating different SQL dialects.
-
-    @param request: Pytest request with dialect parameter
-    @return: AutomationDatabase instance configured for specific dialect
-    """
-    dialect = request.param
-    test_db = AutomationDatabase('sqlite:///:memory:', dialect=dialect)
-    test_db.create_tables()
-
-    test_db.Session.remove()
-
-    yield test_db
-
-    test_db.Session.remove()
-    Base.metadata.drop_all(test_db.engine)
-    AutomationDatabaseManager.close()
-
-
-@pytest.fixture(scope="session")
-def real_db() -> AutomationDatabase:
-    """
-    Provide connection to real database configured in database_config.yaml under 'automation_db' tag.
-    This fixture uses the actual database, not an in-memory one.
-
-    @return: AutomationDatabase instance connected to real database
-    """
-    # Initialize database manager with default config (uses automation_db from yaml)
-    AutomationDatabaseManager.initialize()
-    db = AutomationDatabaseManager.get_database()
-
-    yield db
-
-    # Don't drop tables or cleanup data in real database
-    AutomationDatabaseManager.close()
 
 
 class SampleTestCase(TestCase):
@@ -150,3 +113,27 @@ def dummy_test_case():
         scope="Unit",
         component="API"
     )
+
+
+@pytest.fixture(autouse=True)
+def clean_test_run():
+    """Reset TestRun singleton before and after each test."""
+    TestRun.reset()
+    yield
+    TestRun.reset()
+
+
+@pytest.fixture
+def active_test_run(clean_test_run, test_db):
+    """Fixture providing active TestRun instance."""
+    with patch('core.automation_database_manager.AutomationDatabaseManager.get_database', return_value=test_db):
+        test_run = TestRun.initialize(owner="test_user")
+        yield test_run
+
+
+@pytest.fixture
+def test_db():
+    """Create in-memory database for testing."""
+    db = AutomationDatabase('sqlite:///:memory:')
+    db.create_tables()
+    yield db

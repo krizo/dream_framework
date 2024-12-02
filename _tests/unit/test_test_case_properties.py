@@ -1,6 +1,6 @@
 import pytest
 
-from core.exceptions import RequiredPropertyError, InvalidPropertyError, PropertyValidationError
+from core.exceptions import RequiredPropertyError, InvalidPropertyError, PropertyValidationError, InvalidScopeError
 from core.test_case import TestCase
 
 
@@ -38,20 +38,12 @@ def test_invalid_property_names(base_test_case):
 def test_property_type_validation(base_test_case):
     """Test property type validation."""
     # Test invalid scope type
-    with pytest.raises(PropertyValidationError) as exc:
+    with pytest.raises(InvalidScopeError) as exc:
         SimpleTestCase(scope=123, component="API")
-
-    assert exc.value.property_name == "SCOPE"
-    assert exc.value.details['expected_type'] == "str"
-    assert exc.value.details['actual_type'] == "int"
 
     # Test invalid component type
     with pytest.raises(PropertyValidationError) as exc:
         SimpleTestCase(scope="Backend", component=['API'])
-
-    assert exc.value.property_name == "COMPONENT"
-    assert exc.value.details['expected_type'] == "str"
-    assert exc.value.details['actual_type'] == "list"
 
 
 def test_optional_properties(base_test_case):

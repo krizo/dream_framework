@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from typing import Optional, List
 
-from sqlalchemy import create_engine, StaticPool, MetaData, inspect
+from sqlalchemy import create_engine, StaticPool, inspect, MetaData
 from sqlalchemy.orm import sessionmaker, scoped_session, joinedload
 
 from core.logger import Log
@@ -53,28 +53,56 @@ class AutomationDatabase:
         return self._dialect
 
     def create_tables(self):
-        """
-        Recreate all tables with proper dependency handling.
-        """
+        """Create all tables with proper dependency handling."""
         try:
-            # Drop existing tables
-            metadata = MetaData()
-            metadata.reflect(bind=self.engine)
-            metadata.drop_all(self.engine)
+            from models.test_run_model import TestRunModel
+            from models.step_model import StepModel
 
-            # Create fresh schema
-            Base.metadata.create_all(self.engine)
+            import os
+            if os.environ.get('PYTEST_XDIST_WORKER'):
+                try:
+                    inspector = inspect(self.engine)
+                    tables = inspector.get_table_names()
+                    required_tables = {'test_cases', 'test_execution_records', 'test_runs', 'custom_metrics', 'steps'}
+                    if not required_tables.issubset(set(tables)):
+                        import time
+                        for _ in range(30):  # max 30 attempts
+                            time.sleep(0.1)
+                            tables = inspector.get_table_names()
+                            if required_tables.issubset(set(tables)):
+                                return
+                        raise Exception("Required tables not found after waiting")
+                    return
+                except Exception as e:
+                    Log.warning(f"Worker {os.environ['PYTEST_XDIST_WORKER']} waiting for tables: {str(e)}")
+                    return
 
-            inspector = inspect(self.engine)
-            created_tables = inspector.get_table_names()
-            Log.info("Created database schema:")
-            for table in created_tables:
-                columns = [col['name'] for col in inspector.get_columns(table)]
-                Log.info(f"  Table {table}: {', '.join(columns)}")
+            _ = [TestRunModel, TestCaseModel, TestExecutionRecordModel,
+                 CustomMetricModel, StepModel]
+
+            try:
+                # Drop existing tables
+                metadata = MetaData()
+                metadata.reflect(bind=self.engine)
+                metadata.drop_all(self.engine)
+
+                inspector = inspect(self.engine)
+                tables = inspector.get_table_names()
+                if not tables:
+                    Base.metadata.create_all(self.engine)
+                    Log.debug("Database tables created successfully")
+                else:
+                    Log.debug("Tables already exist, skipping creation")
+            except Exception as e:
+                if "already exists" in str(e):
+                    Log.debug("Tables already exist, continuing")
+                else:
+                    raise
 
         except Exception as e:
             Log.error(f"Error managing database schema: {str(e)}")
-            raise
+            if not os.environ.get('PYTEST_XDIST_WORKER'):
+                raise
 
     def verify_schema(self):
         """

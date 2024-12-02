@@ -41,6 +41,7 @@ from typing import Dict, Optional
 import pytest
 import requests
 
+from core.logger import Log
 from core.step import step_start
 from core.test_case import TestCase
 from helpers.decorators import step
@@ -198,7 +199,7 @@ class PokemonBattleTest(TestCase):
 
     @step(content="Verify type advantage between {attacker} and {defender}")
     def assert_type_advantage(self, attacker: str, defender: str,
-                            effectiveness: Dict[str, float]) -> None:
+                              effectiveness: Dict[str, float]) -> None:
         """Verify type advantage relationships."""
         assert effectiveness[attacker] != 1.0, \
             f"{attacker} should have type relationship with {defender}"
@@ -215,11 +216,13 @@ def pokemon_battle():
     return PokemonBattleTest()
 
 
-def test_steps_e2e_pokemon_battle_workflow(pokemon_battle):
+def test_e2e_pokemon_battle_workflow(pokemon_battle):
     """
     Integration test for Pokemon battle mechanics.
     Tests type advantages, stats, and abilities using Charizard vs Blastoise battle.
     """
+    Log.info("Starting Pokemon battle test")
+
     # Initialize battle
     pokemon_battle.initialize_battle("charizard", "blastoise")
 
@@ -245,8 +248,10 @@ def test_steps_e2e_pokemon_battle_workflow(pokemon_battle):
     assert effectiveness['blastoise'] > effectiveness['charizard'], \
         "Blastoise should have type advantage over Charizard"
 
+    Log.info("Pokemon battle test completed successfully")
 
-def test_error_handling(pokemon_battle):
+
+def test_e2e_error_handling(pokemon_battle):
     """Test error handling in Pokemon battle scenarios."""
     # Try to calculate effectiveness without initialization
     with pytest.raises(AssertionError) as exc:

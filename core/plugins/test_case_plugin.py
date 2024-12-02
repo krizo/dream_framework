@@ -1,36 +1,35 @@
-import logging
-import logging.config
+"""Plugin for managing test cases and execution records."""
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional
 
 import pytest
+from sqlalchemy.orm import Session
 
 from core.automation_database_manager import AutomationDatabaseManager
 from core.logger import Log
-from core.step import Step
 from core.test_case import TestCase
 from core.test_execution_record import TestExecutionRecord
-from core.test_result import TestResult
-
-
-class TestNotFoundException(Exception):
-    """Raised when TestCase fixture is not found in test."""
-    pass
+from core.test_run import TestRun
+from models.test_case_model import TestCaseModel
 
 
 class TestCasePlugin:
-    """
-    Plugin for handling TestCase and TestExecutionRecord persistence during test execution.
-    Ensures unique test cases based on module and function location.
-    """
-    _test_executions: Dict[str, TestExecutionRecord] = {}
+    """Plugin for handling TestCase and TestExecutionRecord persistence."""
 
-    _test_executions: Dict[str, TestExecutionRecord] = {}
+    _current_execution: Optional[TestExecutionRecord] = None
     _executions_by_worker: Dict[str, TestExecutionRecord] = {}
+
+    def __init__(self, test_run: TestRun):
+        """Initialize plugin with test run instance."""
+        self.test_run = test_run
+        self._test_executions: Dict[str, TestExecutionRecord] = {}
+        self._db = AutomationDatabaseManager.get_database()
 
     @classmethod
     def get_current_execution(cls) -> Optional[TestExecutionRecord]:
-        """Get current test execution for this worker."""
+        """Get current test execution."""
         try:
             worker = pytest.xdist.get_worker_id()
             worker_id = worker if worker else 'master'
@@ -40,166 +39,166 @@ class TestCasePlugin:
         return cls._executions_by_worker.get(worker_id)
 
     @classmethod
-    def set_current_execution(cls, execution: TestExecutionRecord):
-        """Set current test execution for this worker."""
+    def set_current_execution(cls, execution: Optional[TestExecutionRecord]):
+        """Set current test execution."""
         try:
             worker = pytest.xdist.get_worker_id()
             worker_id = worker if worker else 'master'
         except (ImportError, AttributeError):
             worker_id = 'master'
 
-        cls._executions_by_worker[worker_id] = execution
-
-    @staticmethod
-    def _find_test_case_fixture(item) -> TestCase:
-        """
-        Find TestCase fixture in pytest item.
-
-        @param item: pytest item
-        @return: TestCase instance
-        @raises TestNotFoundException: If no TestCase fixture is found
-        """
-        try:
-            return next(fixture for fixture in item.funcargs.values() if isinstance(fixture, TestCase))
-        except StopIteration:
-            raise TestNotFoundException(
-                "No TestCase fixture found. Each test must have a TestCase fixture provided."
-            )
-
-    @staticmethod
-    def _setup_logging(item, test_case: TestCase):
-        """
-        Configure logging for test execution.
-
-        @param item: pytest item
-        @param test_case: TestCase instance
-        """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        from conftest import LOGGER_CONFIG_PATH, LOG_DIR
-        logging.config.fileConfig(
-            LOGGER_CONFIG_PATH,
-            defaults={
-                'log_dir': str(LOG_DIR),
-                'test_function': test_case.test_function,
-                'timestamp': timestamp
-            },
-            disable_existing_loggers=False
-        )
-
-    def pytest_runtest_setup(self, item):
-        """Setup test execution - reset steps."""
-        Step.reset_worker()
+        if execution is None:
+            cls._executions_by_worker.pop(worker_id, None)
+        else:
+            cls._executions_by_worker[worker_id] = execution
 
     def pytest_runtest_call(self, item):
-        """
-        Hook executed before test execution.
-        Handles TestCase uniqueness and persistence.
-
-        @param item: pytest item representing the test being run
-        @raises TestNotFoundException: When no TestCase fixture is found
-        @raises TestCaseError: When test case validation fails
-        """
-        if item.get_closest_marker('no_database_plugin'):
-            return
-
-        test_full_path = item.nodeid
-        test_module, test_function = test_full_path.split('::')
-
-        test_case = self._find_test_case_fixture(item)
-        test_case.set_test_location(test_module, test_function)
-
-        # Configure logging
-        self._setup_logging(item, test_case)
-
-        # Create execution record
-        execution_record = TestExecutionRecord(test_case)
-        test_case.set_execution_record(execution_record)
-        execution_record.set_test_location(test_module, test_function,
-                                         test_case.name, test_case.description)
-        execution_record.start()
-
-        self._test_executions[test_full_path] = execution_record
-        self.set_current_execution(execution_record)
-
+        """Handle test execution."""
         try:
-            db = AutomationDatabaseManager.get_database()
+            # Ensure TestRun instance is available
+            if not TestRun.get_instance():
+                Log.info(f"Restoring TestRun before test execution: {self.test_run.test_run_id}")
+                TestRun._instance = self.test_run
 
-            # Handle test case persistence
-            existing_test = db.fetch_test_case_by_test_id(test_case.test_id)
-            if existing_test:
-                test_case.id = existing_test.id
+            test_full_path = item.nodeid
+            test_module, test_function = test_full_path.split('::')
 
-                # Update existing test case if needed
-                if self._should_update_test_case(existing_test, test_case):
-                    db.update_test_case(test_case)
-            else:
-                test_case_id = db.insert_test_case(test_case)
-                test_case.id = test_case_id
+            # Find TestCase fixture
+            test_case = None
+            for arg_name, arg_value in item.funcargs.items():
+                if isinstance(arg_value, TestCase):
+                    test_case = arg_value
+                    break
 
-            # Persist execution record
-            execution_id = db.insert_test_execution(execution_record)
-            execution_record.id = execution_id
-            Log.separator()
+            if not test_case:
+                Log.info("No TestCase fixture found - using default")
+                test_case = TestCase(
+                    name=test_function,
+                    description=f"Auto-generated test case for {test_function}",
+                    test_suite="Automated Tests",
+                    scope="Unit",
+                    component="Test"
+                )
+
+            test_case.set_test_location(test_module, test_function)
+
+            with self._db.session_scope() as session:
+                try:
+                    # Ensure TestRun exists in database first
+                    test_run_model = session.query(TestRun.get_model()) \
+                        .filter_by(test_run_id=self.test_run.test_run_id) \
+                        .first()
+
+                    if not test_run_model:
+                        session.add(self.test_run.to_model())
+                        session.flush()
+
+                    test_case_id = self._ensure_test_case(session, test_case)
+                    test_case.id = test_case_id
+
+                    if not TestRun.get_instance():
+                        TestRun._instance = self.test_run
+
+                    test_run_id = os.environ.get('XDIST_TEST_RUN_ID', self.test_run.test_run_id)
+
+                    # Create execution record
+                    execution_record = TestExecutionRecord(test_case)
+                    execution_record.set_test_location(
+                        test_module, test_function,
+                        test_case.name, test_case.description
+                    )
+                    execution_record.initialize()
+                    execution_record.start()
+
+                    # Save execution record
+                    execution_model = execution_record.to_model()
+                    execution_model.test_run_id = test_run_id
+                    session.add(execution_model)
+                    session.flush()
+                    execution_record.id = execution_model.id
+
+                    if os.environ.get('PYTEST_XDIST_WORKER'):
+                        session.commit()
+
+                except Exception as e:
+                    Log.error(f"Error in test case setup: {str(e)}")
+                    session.rollback()
+                    raise
+
+                # Setup logging after ensuring execution record
+                self._setup_logging(item, test_case, execution_record)
+
+                test_case.set_execution_record(execution_record)
+                self._test_executions[test_full_path] = execution_record
+                self.set_current_execution(execution_record)
+                Log.info(f"Test execution active with ID: {execution_record.id}")
 
         except Exception as e:
-            Log.error(f"Error persisting test data: {str(e)}")
+            Log.error(f"Error in test setup: {str(e)}")
             raise
 
-    def pytest_runtest_teardown(self, item):
-        """Cleanup after test execution."""
-        Step.reset_worker()
-        self.set_current_execution(None)
+    def _ensure_test_case(self, session: Session, test_case: TestCase) -> int:
+        """Ensure test case exists in database."""
+        # First try finding by test_id
+        existing = session.query(TestCaseModel) \
+            .filter_by(test_id=test_case.test_id) \
+            .first()
 
-    @staticmethod
-    def _should_update_test_case(existing: TestCase, current: TestCase) -> bool:
-        """
-        Check if test case should be updated.
+        if existing:
+            if self._should_update_test_case(TestCase.from_model(existing), test_case):
+                Log.info(f"Updating test case {test_case.test_id}")
+                existing.name = test_case.name
+                existing.description = test_case.description
+                existing.test_suite = test_case.test_suite
+            return existing.id
 
-        @param existing: Existing TestCase from database
-        @param current: Current TestCase from test
-        @return: True if update is needed
-        """
+        # Create new test case
+        model = test_case.to_model()
+        session.add(model)
+        session.flush()
+        Log.info(f"Created new test case with ID: {model.id}")
+        return model.id
+
+    def _should_update_test_case(self, existing: TestCase, current: TestCase) -> bool:
+        """Check if test case should be updated."""
         return (
                 existing.name != current.name or
                 existing.description != current.description or
                 existing.test_suite != current.test_suite
         )
 
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_makereport(self, item, call):
+    def _setup_logging(self, item, test_case, execution_record):
         """
-        Hook executed after test completion.
-        Updates execution record with results.
+        Configure logging for test execution.
+        Creates log file for test in flat structure.
 
         @param item: pytest item
-        @param call: pytest call object
+        @param test_case: current test case
+        @param execution_record: current execution record
         """
-        outcome = yield
-        report = outcome.get_result()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        if call.when == "call":
+        # Get base log directory from test run
+        test_log_dir = Path(self.test_run.get_log_dir()) / 'executions'
 
-            test_full_path = item.nodeid
-            execution_record = self._test_executions.get(test_full_path)
+        worker_suffix = ""
+        if os.environ.get('PYTEST_XDIST_WORKER'):
+            worker_suffix = f"_{os.environ['PYTEST_XDIST_WORKER']}"
 
-            if execution_record is None:
-                Log.error(f"No execution record found for {test_full_path}")
-                return
+        test_log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = test_log_dir / f"{test_case.test_function}{worker_suffix}_{execution_record.id}_{timestamp}.log"
 
-            # Update execution record
-            result = TestResult.from_pytest_report(report)
-            execution_record.end(result)
+        # Configure logging for this execution
+        Log.switch_log_file(str(log_file))
 
-            if call.excinfo:
-                execution_record.set_failure(
-                    str(call.excinfo.value),
-                    call.excinfo.type.__name__
-                )
-
-            try:
-                db = AutomationDatabaseManager.get_database()
-                db.update_test_execution(execution_record)
-                Log.info(f"Updated execution record: {execution_record.id}")
-            except Exception as e:
-                Log.error(f"Failed to update execution record: {str(e)}")
+        # Write execution header
+        Log.separator("=")
+        Log.info(f"Test Run ID: {self.test_run.test_run_id}")
+        Log.info(f"Execution ID: {execution_record.id}")
+        Log.info(f"Test Location: {test_case.test_id}")
+        Log.info(f"Test Name: {test_case.name}")
+        Log.info(f"Test Description: {test_case.description}")
+        Log.info(f"Test Suite: {test_case.test_suite}")
+        if os.environ.get('PYTEST_XDIST_WORKER'):
+            Log.info(f"Worker: {os.environ['PYTEST_XDIST_WORKER']}")
+        Log.separator("=")

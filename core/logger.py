@@ -1,10 +1,12 @@
+"""Core logging module."""
 import logging
+import logging.config
 from enum import Enum
 from typing import Optional
 
 # Custom log levels
 STEP_LEVEL = 35
-CONSOLE_LEVEL = 15  # Between DEBUG and INFO
+CONSOLE_LEVEL = 15
 EMPTY_LEVEL = 11
 logging.addLevelName(STEP_LEVEL, "STEP")
 logging.addLevelName(CONSOLE_LEVEL, "CONSOLE")
@@ -12,18 +14,7 @@ logging.addLevelName(EMPTY_LEVEL, "EMPTY")
 
 
 class LogLevel(Enum):
-    """
-    Enumeration of available log levels.
-
-    @param EMPTY: int - Level for messages without additional information
-    @param DEBUG: int - Level for detailed debugging information
-    @param CONSOLE: int - Level for console-only output
-    @param INFO: int - Level for general information
-    @param STEP: int - Level for test step information
-    @param WARNING: int - Level for warning messages
-    @param ERROR: int - Level for error messages
-    @param CRITICAL: int - Level for critical error messages
-    """
+    """Enumeration of available log levels."""
     EMPTY = EMPTY_LEVEL
     DEBUG = logging.DEBUG
     CONSOLE = CONSOLE_LEVEL
@@ -35,246 +26,178 @@ class LogLevel(Enum):
 
 
 class MultiFormatter(logging.Formatter):
-    """
-    Formatter that applies different formats based on the log level.
+    """Formatter that applies different formats based on log level."""
 
-    @param fmt: str - Message format string
-    @param datefmt: str - Date format string
-    @param style: str - Format style
-    @param validate: bool - Whether to validate the format string
-    @return str - The formatted message
-    """
-
-    def __init__(self, fmt=None, datefmt=None, style='%', validate=True):
-        super().__init__(fmt, datefmt, style, validate)
-        self.default_formatter = logging.Formatter(
-            '%(asctime)s | %(levelname)-8s | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-            style='%'
-        )
+    def __init__(self):
+        super().__init__('%(asctime)s | %(levelname)-8s | %(message)s',
+                         datefmt='%Y-%m-%d %H:%M:%S')
 
     def format(self, record):
         if record.levelno == EMPTY_LEVEL:
             return record.getMessage()
-        return self.default_formatter.format(record)
-
-
-class ConsoleFilter(logging.Filter):
-    """ Filter for console output to show only CONSOLE level messages. """
-
-    def filter(self, record):
-        """
-        Filter log records for console output.
-
-        @param record: logging.LogRecord - The log record to be filtered
-        @return bool - True if the record should be logged, False otherwise
-        """
-        return record.levelno in [CONSOLE_LEVEL, logging.INFO, STEP_LEVEL,
-                                  logging.WARNING, logging.ERROR, logging.CRITICAL]
-
-
-class FileFilter(logging.Filter):
-    """ Filter for file output to show INFO and STEP level messages. """
-
-    def filter(self, record):
-        """
-        Filter log records for file output.
-
-        @param record: logging.LogRecord - The log record to be filtered
-        @return bool - True if the record should be logged, False otherwise
-        """
-        return record.levelno in [logging.INFO, STEP_LEVEL, logging.WARNING, logging.ERROR, logging.CRITICAL]
+        return super().format(record)
 
 
 class EmptyFormatter(logging.Formatter):
-    """
-    Formatter for EMPTY level messages - returns message without any additional formatting.
-
-    @param record: logging.LogRecord - The log record to be formatted
-    @return str - The formatted message
-    """
+    """Formatter for empty messages without any additional formatting."""
 
     def format(self, record):
         return record.getMessage()
 
 
+class ConsoleFilter(logging.Filter):
+    """Filter allowing console messages to pass through."""
+
+    def filter(self, record):
+        return record.levelno >= CONSOLE_LEVEL
+
+
+class FileFilter(logging.Filter):
+    """Filter allowing file messages to pass through."""
+
+    def filter(self, record):
+        return record.levelno != CONSOLE_LEVEL
+
+
 class Log:
-    """
-    Static logger class providing centralized logging functionality.
-    """
+    """Static logger class providing centralized logging functionality."""
+
     _instance: Optional[logging.Logger] = None
-    _step_counter: int = 0
     _initialized: bool = False
+    _step_counter: int = 0
 
     @classmethod
     def _initialize(cls):
-        """
-        Initialize logger with proper configuration.
-        Sets up console and file handlers with correct filters and formatters.
-        Should be called only once.
-        """
+        """Initialize logger with proper configuration."""
         if cls._initialized:
             return
 
-        # Create or get logger instance
         logger = logging.getLogger("TestLogger")
         logger.setLevel(logging.DEBUG)
+        logger.handlers.clear()
 
-        if logger.handlers:
-            logger.handlers.clear()
-
-        # Create and configure console handler
+        # Add console handler
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(MultiFormatter())
+        console_handler.setLevel(logging.DEBUG)
         console_handler.addFilter(ConsoleFilter())
-        console_handler.setLevel(CONSOLE_LEVEL)
         logger.addHandler(console_handler)
 
-        logger.propagate = False  # Don't propagate logs to other loggers (like root)
+        logger.propagate = False
         cls._instance = logger
         cls._initialized = True
 
     @classmethod
-    def _get_logger(cls) -> logging.Logger:
-        """
-        Get or create logger instance with proper configuration.
-
-        @return: Configured logger instance
-        """
+    def get_logger(cls) -> logging.Logger:
+        """Get or create logger instance."""
         if not cls._initialized:
             cls._initialize()
         return cls._instance
 
     @classmethod
     def reconfigure_file_handler(cls, log_file: str):
-        """
-        Reconfigure file handler with new log file.
-        Used when fileConfig is called with new log file path.
-
-        @param log_file: Path to log file
-        @return: None
-        """
-        logger = cls._get_logger()
+        """Configure file handler with new log file."""
+        logger = cls.get_logger()
 
         # Remove old file handlers
         for handler in logger.handlers[:]:
             if isinstance(handler, logging.FileHandler):
+                handler.close()
                 logger.removeHandler(handler)
 
-        # Create and configure new file handler
-        file_handler = logging.FileHandler(log_file)
+        # Add new file handler
+        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
         file_handler.setFormatter(MultiFormatter())
+        file_handler.setLevel(logging.DEBUG)
         file_handler.addFilter(FileFilter())
-        file_handler.setLevel(logging.INFO)
         logger.addHandler(file_handler)
 
     @classmethod
-    def reset(cls):
-        """
-        Reset logger to initial state.
-        Useful for testing and reconfiguration.
-
-        @return: None
-        """
+    def reset(cls, preserve_handlers=None):
+        """Reset logger to initial state."""
         if cls._instance:
-            cls._instance.handlers.clear()
-        cls._instance = None
-        cls._initialized = False
+            preserved = []
+            if preserve_handlers:
+                preserved = [h for h in cls._instance.handlers if h in preserve_handlers]
+
+            for handler in cls._instance.handlers[:]:
+                if handler not in preserved:
+                    handler.close()
+                    cls._instance.removeHandler(handler)
+
+            cls._instance.handlers = preserved
+
         cls._step_counter = 0
 
     @classmethod
     def _log(cls, level: LogLevel, message: str, *args, **kwargs):
-        """
-        Internal logging method.
-
-        @param level: LogLevel - Enum value defining log level
-        @param message: str - Message to be logged
-        @param args: tuple - Variable length argument list
-        @param kwargs: dict - Arbitrary keyword arguments
-        """
-        logger = cls._get_logger()
+        """Internal logging method."""
+        logger = cls.get_logger()
         logger.log(level.value, message, *args, **kwargs)
 
     @classmethod
     def console(cls, message: str):
-        """
-        Log console message (visible only in console output).
-
-        @param message: str - Console message to be logged
-        """
+        """Log console message."""
         cls._log(LogLevel.CONSOLE, message)
 
     @classmethod
     def debug(cls, message: str):
-        """
-        Log debug message.
-
-        @param message: str - Debug message to be logged
-        """
+        """Log debug message."""
         cls._log(LogLevel.DEBUG, message)
 
     @classmethod
     def info(cls, message: str):
-        """
-        Log info message (visible in pytest report).
-
-        @param message: str - Info message to be logged
-        """
+        """Log info message."""
         cls._log(LogLevel.INFO, message)
 
     @classmethod
     def step(cls, message: str):
-        """
-        Log test step (visible in pytest report).
-        Steps are logged at custom STEP level for high visibility.
-
-        @param message: str - Step description to be logged
-        """
+        """Log test step."""
         cls._step_counter += 1
-        cls._log(LogLevel.STEP, f"{message}")
+        cls._log(LogLevel.STEP, message)
 
     @classmethod
     def warning(cls, message: str):
-        """
-        Log warning message.
-
-        @param message: str - Warning message to be logged
-        """
+        """Log warning message."""
         cls._log(LogLevel.WARNING, message)
 
     @classmethod
     def error(cls, message: str):
-        """
-        Log error message.
-
-        @param message: str - Error message to be logged
-        """
+        """Log error message."""
         cls._log(LogLevel.ERROR, message)
 
     @classmethod
     def critical(cls, message: str):
-        """
-        Log critical message.
-
-        @param message: str - Critical message to be logged
-        """
+        """Log critical message."""
         cls._log(LogLevel.CRITICAL, message)
 
     @classmethod
     def separator(cls, char: str = '-', length: int = 80) -> None:
-        """
-        Create a visual separator line in logs without any additional formatting.
-
-        @param char: str - Character to use for the separator line (default: '-')
-        @param length: int - Length of the separator line (default: 80)
-        """
+        """Create a visual separator line in logs."""
         separator_line = char * length
         cls._log(LogLevel.EMPTY, separator_line)
 
     @classmethod
     def reset_step_counter(cls):
-        """
-        Reset step counter to 0.
-
-        """
+        """Reset step counter to 0."""
         cls._step_counter = 0
+
+    @classmethod
+    def switch_log_file(cls, log_file: str):
+        """
+        Switch logging to a different file.
+        Preserves handlers other than file handler.
+        """
+        logger = cls.get_logger()
+
+        other_handlers = [h for h in logger.handlers if not isinstance(h, logging.FileHandler)]
+        logger.handlers.clear()
+
+        for handler in other_handlers:
+            logger.addHandler(handler)
+
+        file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+        file_handler.setFormatter(MultiFormatter())
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.addFilter(FileFilter())
+        logger.addHandler(file_handler)

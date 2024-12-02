@@ -1,11 +1,15 @@
+"""Main database management module."""
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
 import yaml
+from sqlalchemy import MetaData, inspect
 
 from core.automation_database import AutomationDatabase
+from core.configuration.framework_config import FrameworkConfig
 from core.logger import Log
 
 
@@ -21,6 +25,14 @@ class AutomationDatabaseConfig:
     """
     url: str
     dialect: Optional[str] = None
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if not self.url or not isinstance(self.url, str):
+            raise ValueError("Database URL must be a non-empty string")
+
+        if self.dialect is not None and not isinstance(self.dialect, str):
+            raise ValueError("Database dialect must be a string or None")
 
     @classmethod
     def from_yaml(cls, yaml_path: Union[str, Path], config_tag: str = 'automation_db') -> 'AutomationDatabaseConfig':
@@ -88,16 +100,77 @@ class AutomationDatabaseManager:
         """
         if cls._db_instance is None:
             if connection_string is not None:
-                # Use direct connection string
                 cls._config = AutomationDatabaseConfig.from_url(connection_string, dialect)
             else:
-                # Use configuration file
                 if config_path is None:
                     config_path = Path(__file__).parent.parent / 'config' / 'database_config.yaml'
                 cls._config = AutomationDatabaseConfig.from_yaml(config_path, config_tag)
 
             cls._db_instance = AutomationDatabase(cls._config.url, cls._config.dialect)
-            cls._db_instance.create_tables()
+
+            worker_id = os.environ.get('PYTEST_XDIST_WORKER')
+            if not worker_id:  # Master process only
+                try:
+                    if FrameworkConfig.should_drop_database():
+                        Log.info("Dropping all database tables as configured")
+                        cls._drop_all_tables()
+                        Log.info("Successfully dropped all database tables")
+
+                    # Create tables
+                    cls._db_instance.create_tables()
+                    Log.debug("Database tables created successfully by master")
+                except Exception as e:
+                    Log.error(f"Error initializing database: {str(e)}")
+                    raise
+            else:  # Worker process
+                # Wait for tables to be created by master
+                max_retries = 30
+                retry_interval = 0.1
+                required_tables = {'test_cases', 'test_execution_records', 'test_runs', 'custom_metrics', 'steps'}
+
+                Log.debug(f"Worker {worker_id} waiting for tables to be created")
+                for attempt in range(max_retries):
+                    try:
+                        inspector = inspect(cls._db_instance.engine)
+                        existing_tables = set(inspector.get_table_names())
+                        if required_tables.issubset(existing_tables):
+                            Log.debug(f"Worker {worker_id} found required tables")
+                            break
+                    except Exception as e:
+                        Log.warning(f"Worker {worker_id} error checking tables: {str(e)}")
+
+                    if attempt == max_retries - 1:
+                        raise RuntimeError(f"Worker {worker_id} timed out waiting for tables")
+
+                    time.sleep(retry_interval)
+
+    @classmethod
+    def _drop_all_tables(cls) -> None:
+        """Drop all database tables."""
+        if not cls._db_instance:
+            return
+
+        try:
+            # Get list of tables first
+            inspector = inspect(cls._db_instance.engine)
+            tables = inspector.get_table_names()
+
+            if not tables:
+                return
+
+            Log.info(f"Dropping tables: {', '.join(tables)}")
+            metadata = MetaData()
+            metadata.reflect(bind=cls._db_instance.engine)
+
+            # Drop in reverse dependency order
+            for table_name in reversed(metadata.sorted_tables):
+                Log.debug(f"Dropping table {table_name}")
+                table_name.drop(cls._db_instance.engine)
+
+            Log.info("Successfully dropped all database tables")
+        except Exception as e:
+            Log.error(f"Error dropping database tables: {str(e)}")
+            raise
 
     @classmethod
     def get_database(cls) -> AutomationDatabase:

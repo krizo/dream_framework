@@ -225,12 +225,56 @@ def test_api_performance(api_test):
     assert response.status_code == 200
 ```
 
+
+
+
 Custom metrics are automatically stored in the database in json format and can be analyzed later for:
 
 📊 API response time tracking
 📈 Performance trend monitoring
 💰 Processing cost analysis
 🔍 Problem investigation
+
+
+
+# Test Run Management Implementation 🚀
+
+## Overview
+Implementation of a comprehensive test session management system through the `TestRun` class. This is a key framework component that provides a unified way to track and manage test execution.
+
+## Key Features
+
+### 🔄 Singleton Pattern
+- Singleton pattern implementation ensuring single TestRun instance per test session
+- Safe initialization and state reset
+- Multi-worker support in xdist mode
+
+### 📊 Test State Management
+- Execution status tracking (STARTED, COMPLETED, CANCELLED, ERROR)
+- Execution time measurement and duration calculation
+- Automatic CI/local environment detection
+
+### 🌍 Environment Configuration
+- Flexible configuration through parameters or config files
+- Multiple environment support (dev/staging/prod)
+- Automatic CI/CD pipeline detection
+
+### 📝 Logging System
+- Hierarchical logging system with timestamps
+- Separate logs for each TestRun
+- xdist mode logging support
+- Enhanced test execution records logging with detailed metrics and status tracking
+
+### 🔁 pytest-xdist Support
+- TestRun coordination between workers
+- TestRun ID sharing
+- Logging synchronization
+
+### 💾 Persistence
+- Automatic state persistence to database
+- TestExecutionRecord relationships
+- Metrics and statistics tracking
+- Test run status management (STARTED, COMPLETED, CANCELLED, ERROR)
 
 
 
@@ -535,6 +579,50 @@ During implementing your tests remember about few things that will help you keep
    * Track performance trends
    * Analyze failure patterns
    * Set up alerts for degradation
+
+K
+I dodaj sekcję do Readme apropos testów - rodzaje, co pokrywają itd
+
+
+## 🧪 Testing
+
+The framework itself is thoroughly tested using pytest. Test suite covers:
+
+### 🔬 Test Types
+* 🧩 **Unit Tests** - individual components testing
+* 🔗 **Integration Tests** - component interaction verification
+* 🔄 **E2E Tests** - complete workflow validation
+* 💾 **Database Tests** - persistence and SQL dialect compatibility
+
+### 📊 Coverage Areas
+* 🎯 Core functionality
+  * Test case management
+  * Execution record handling
+  * Test run lifecycle
+  * Database operations
+* 🔄 Framework features
+  * Step system
+  * Wait conditions
+  * Custom metrics
+  * Environment handling
+* 📝 Plugins and extensions
+  * pytest plugin integration
+  * xdist compatibility
+  * Logger customization
+
+### ⚙️ Running Tests
+```bash
+# Run all tests
+pytest -v
+
+# Run specific test category
+pytest test_test_run.py
+pytest test_steps*.py
+pytest test_*_e2e.py
+
+## Known Issues 🐛
+
+Running tests with xdist in single worker mode (-n1) causes issues with TestRun initialization and database management. However, using single worker mode with xdist doesn't provide any benefits over standard pytest execution.
 
 ---
 

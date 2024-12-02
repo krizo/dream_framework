@@ -3,7 +3,7 @@ from pathlib import Path
 
 from _tests.fixtures import *
 from core.logger import Log
-from core.plugins.test_case_plugin import TestCasePlugin
+from core.plugins.test_session_plugin import TestSessionPlugin
 
 ROOT_DIR = Path(__file__).parent
 CONFIG_DIR = ROOT_DIR / 'config'
@@ -12,45 +12,54 @@ LOGGER_CONFIG_PATH = CONFIG_DIR / 'logger.ini'
 
 
 def clean_logs_directory():
-    """
-    Clean logs directory by removing all files and recreating the directory.
-
-    """
+    """Clean logs directory by removing all files."""
     if LOG_DIR.exists():
-        Log.info(f"Cleaning logs directory: {LOG_DIR}")
         shutil.rmtree(LOG_DIR)
-        Log.info("Previous logs directory removed")
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    Log.info("Fresh logs directory created")
-
-
-def pytest_configure(config):
-    """
-    Configure pytest environment and logger setup.
-        1. Clean logs directory
-        2. Register plugins
-
-    @param config: pytest.Config - Pytest configuration object
-    """
-
-    # Clean logs directory before test run
-    clean_logs_directory()
-
-    # Register plugins
-    config.pluginmanager.register(TestCasePlugin())
-    config.addinivalue_line(
-        "markers", "no_database_plugin: mark test to disable database plugin"
-    )
 
 
 @pytest.fixture(autouse=True)
 def reset_step_counter():
-    """
-    Fixture to reset step counter before each test.
-
-    @returns None - Yields control back to the test after setup
-    """
+    """Reset step counter before each test."""
     Log.reset_step_counter()
     yield
+    Log.reset_step_counter()
+
+
+def pytest_configure(config):
+    """Configure test session and plugins."""
+    if not hasattr(config, 'workerinput'):  # Not running in worker
+        clean_logs_directory()
+
+    # Initialize plugins
+    session_plugin = TestSessionPlugin()
+    config.pluginmanager.register(session_plugin)
+
+
+def pytest_runtest_setup(item):
+    """Setup test execution."""
+    if item.get_closest_marker('no_execution_record'):
+        # Temporarily disable TestCasePlugin
+        pluginmanager = item.config.pluginmanager
+        test_case_plugin = next(
+            (p for p in pluginmanager.get_plugins() if type(p).__name__ == 'TestCasePlugin'),
+            None
+        )
+        if test_case_plugin:
+            pluginmanager.unregister(test_case_plugin)
+            item.user_properties.append(("disabled_plugin", test_case_plugin))
+
+
+def pytest_runtest_teardown(item):
+    """Restore test environment after test."""
+    if item.get_closest_marker('no_execution_record'):
+        # Re-enable TestCasePlugin if it was disabled
+        disabled_plugin = next(
+            (p[1] for p in item.user_properties if p[0] == "disabled_plugin"),
+            None
+        )
+        if disabled_plugin:
+            item.config.pluginmanager.register(disabled_plugin)
+
 

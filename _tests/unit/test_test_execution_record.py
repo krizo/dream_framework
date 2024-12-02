@@ -32,8 +32,8 @@ def test_execution_lifecycle(dummy_test_case):
     # Test initialization
     execution.initialize()
     assert execution._initialized
-    assert execution.test_name == dummy_test_case.name
-    assert execution.test_description == dummy_test_case.description
+    assert execution.test_case.name == dummy_test_case.name
+    assert execution.test_case.description == dummy_test_case.description
 
     # Test start
     execution.start()

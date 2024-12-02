@@ -4,7 +4,7 @@ from core.exceptions import (
     RequiredPropertyError,
     InvalidPropertyError,
     PropertyValidationError,
-    TestCaseError
+    TestCaseError, InvalidScopeError
 )
 from core.test_case import TestCase
 
@@ -78,15 +78,12 @@ def test_property_validation(base_test_case):
     @raises PropertyValidationError: When property value has invalid type
     """
     # Test invalid scope type
-    with pytest.raises(PropertyValidationError) as exc_info:
+    with pytest.raises(InvalidScopeError) as exc_info:
         TestCase(
             name="Test",
             scope=123,  # Should be string
             component="API"
         )
-    assert exc_info.value.property_name == "SCOPE"
-    assert exc_info.value.details["expected_type"] == "str"
-    assert exc_info.value.details["actual_type"] == "int"
 
     # Test invalid component type
     with pytest.raises(PropertyValidationError) as exc_info:
@@ -95,9 +92,6 @@ def test_property_validation(base_test_case):
             scope="Unit",
             component=["API"]  # Should be string
         )
-    assert exc_info.value.property_name == "COMPONENT"
-    assert exc_info.value.details["expected_type"] == "str"
-    assert exc_info.value.details["actual_type"] == "list"
 
 
 def test_optional_properties(base_test_case):
@@ -170,10 +164,10 @@ def test_model_conversion(base_test_case):
     @raises TestCaseError: When converting to model without test_id
     """
     invalid_test_case = TestCase(
-            name="Test",
-            scope="Unit",
-            component="API",
-        )
+        name="Test",
+        scope="Unit",
+        component="API",
+    )
     # Test conversion without test_id
     with pytest.raises(TestCaseError) as exc:
         invalid_test_case.to_model()

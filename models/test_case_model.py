@@ -19,8 +19,8 @@ class TestCaseModel(Base):
     """
     __tablename__ = 'test_cases'
 
-    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
-    test_id = Column(String(500), unique=True, nullable=False, index=True)
+    id = Column(Integer, primary_key=True)
+    test_id = Column(String(500), unique=True, nullable=False)
     test_module = Column(String(255), nullable=False)
     test_function = Column(String(255), nullable=False)
     name = Column(String(255), nullable=False)
@@ -28,5 +28,8 @@ class TestCaseModel(Base):
     test_suite = Column(String(255))
     properties = Column(JSON)
 
-    executions = relationship("TestExecutionRecordModel", back_populates="test_case",
-                              cascade="all, delete-orphan")
+    # Relationships
+    executions = relationship("TestExecutionRecordModel", back_populates="test_case")
+
+    def __repr__(self) -> str:
+        return f"<TestCase {self.test_id}>"
