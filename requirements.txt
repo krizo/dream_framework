@@ -10,3 +10,4 @@ responses==0.24.1          # Mock HTTP responses
 SQLAlchemy==2.0.36         # SQL toolkit and ORM
 sqlalchemy-pyodbc-mssql==0.1.1  # MSSQL dialect for SQLAlchemy
 filelock~=3.16.1           # For locking TestRun info into a file
+Jinja2~=3.1.4              # Template engine for reporting system

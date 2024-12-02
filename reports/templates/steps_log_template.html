@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Steps Log</title>
+    <link rel="stylesheet" href="../css/step_logs.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Test Steps Log<span class="cursor"></span></h1>
+        </div>
+
+        <div class="metadata">
+            <div class="metadata-item">
+                <span class="metadata-label">Test Function:</span>
+                <span class="metadata-value">{{ test_function }}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Execution Start Time:</span>
+                <span class="metadata-value">{{ execution_time }}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Total Steps:</span>
+                <span class="metadata-value">{{ total_steps }}</span>
+            </div>
+        </div>
+
+        <div class="log-container">
+            {% for step in steps %}
+            <div class="step" style="--indent-level: {{ step.indent_level }}">
+                <span class="timestamp">{{ step.start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] }}</span>
+                <span class="step-number">{{ step.hierarchical_number }}</span>
+                <div class="step-content-wrapper">
+                    <span class="step-content">{{ step.content }}</span>
+                    {% if step.completed %}
+                        <span class="step-status">✓</span>
+                    {% else %}
+                        <span class="step-status-failed">✗</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

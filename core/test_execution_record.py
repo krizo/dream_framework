@@ -25,17 +25,18 @@ class TestExecutionRecord:
         from core.test_run import TestRun
         test_run = TestRun.get_instance()
         if not test_run:
-            raise RuntimeError("No active TestRun found. TestRun must be initialized before creating TestExecutionRecord")
+            raise RuntimeError(
+                "No active TestRun found. TestRun must be initialized before creating TestExecutionRecord")
 
         self.test_run_id = test_run.test_run_id
         self._initialized = False
-        
+
         # Test location info
         self.test_module: Optional[str] = None
         self.test_function: Optional[str] = None
         self.name: Optional[str] = None
         self.description: Optional[str] = None
-        
+
         # Execution state
         self.result = TestResult.STARTED
         self.start_time = None
@@ -79,7 +80,7 @@ class TestExecutionRecord:
         record.failure = model.failure
         record.failure_type = model.failure_type
         record.environment = model.environment
-        
+
         # Load metrics
         for metric in model.custom_metrics:
             record._metrics[metric.name] = metric.value
@@ -93,14 +94,7 @@ class TestExecutionRecord:
             return
 
         # Add test case properties as metrics
-        self._add_test_case_metrics()
         self._initialized = True
-
-    def _add_test_case_metrics(self) -> None:
-        """Add test case properties to metrics."""
-        properties = self.test_case.get_properties()
-        for name, value in properties.items():
-            self.add_custom_metric(f"test_case_{name}", value)
 
     def set_test_location(self, module: str, function: str, name: str, description: str) -> None:
         """Set test location information."""

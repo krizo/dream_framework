@@ -1,0 +1,51 @@
+/* Retro theme */
+:root {
+    --primary-color: #2F4858;
+    --secondary-color: #33658A;
+    --success-color: #86BBD8;
+    --warning-color: #F6AE2D;
+    --danger-color: #F26419;
+    --info-color: #33658A;
+    --background-color: #F8F4E3;
+    --text-color: #2F4858;
+    --border-color: #33658A;
+    --card-background: #F8F4E3;
+    --hover-color: #F3EDD7;
+    --header-text-color: #2F4858;
+    --table-header-bg: #2F4858;
+    --table-header-text: #F8F4E3;
+    --success-bg: rgba(134, 187, 216, 0.2);
+    --warning-bg: rgba(246, 174, 45, 0.2);
+    --danger-bg: rgba(242, 100, 25, 0.2);
+    --shadow: 4px 4px 0 var(--border-color);
+}
+
+body {
+    background: var(--background-color);
+    color: var(--text-color);
+    font-family: "Courier New", Courier, monospace;
+}
+
+.header {
+    background: var(--card-background);
+    color: var(--header-text-color);
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.metric {
+    background: var(--card-background);
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.section {
+    background: var(--card-background);
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+th {
+    background: var(--table-header-bg);
+    color: var(--table-header-text);
+    border: 2px solid var(--border-color);

@@ -1,0 +1,128 @@
+/* Classic theme - bazujący na poprzednim wyglądzie raportu */
+:root {
+    --primary-color: #2c3e50;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #c0392b;
+    --info-color: #2980b9;
+    --background-color: #ecf0f1;
+    --text-color: #2c3e50;
+    --border-color: #bdc3c7;
+    --card-background: #ffffff;
+    --hover-color: #f8f9fa;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    background: var(--background-color);
+    color: var(--text-color);
+}
+
+.header {
+    background: var(--primary-color);
+    color: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.metric {
+    background: var(--card-background);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.section {
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+/* Table styles */
+.execution-table {
+    background: white;
+}
+
+.execution-table th {
+    background: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+}
+
+.execution-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.execution-table tr:hover {
+    background: var(--hover-color);
+}
+
+/* Status colors */
+.status-passed {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.status-failed {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.status-skipped {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+tr.test-row-passed {
+    background: rgba(39, 174, 96, 0.1);
+}
+
+tr.test-row-failed {
+    background: rgba(192, 57, 43, 0.1);
+}
+
+tr.test-row-skipped {
+    background: rgba(243, 156, 18, 0.1);
+}
+
+/* Links */
+a {
+    color: var(--info-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Metrics section */
+.metric-label {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.metric-value {
+    color: var(--text-color);
+}
+
+/* Test suite section */
+.test-suite {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+}
+
+.test-suite h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+}

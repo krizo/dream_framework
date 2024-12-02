@@ -17,6 +17,7 @@ from models.test_case_execution_record_model import TestExecutionRecordModel
 
 class TestSessionPlugin:
     """Plugin responsible for managing test session and its plugins."""
+    tryfirst = True  # This plugin should run first
 
     def __init__(self):
         """Initialize plugin state."""
@@ -31,7 +32,6 @@ class TestSessionPlugin:
     def pytest_configure(self, config):
         """
         Configure test session and initialize test run infrastructure.
-        Handles different setup for master vs worker nodes in both single and distributed testing modes.
 
         @param config: pytest Configuration object
         @raises RuntimeError: If worker can't find test run ID or test run in database
@@ -56,6 +56,7 @@ class TestSessionPlugin:
             # Initialize test run and persist in database within a transaction
             db = AutomationDatabaseManager.get_database()
             with db.session_scope() as session:
+                # First, we initialize the TestRun
                 test_run = TestRun.initialize(
                     owner=FrameworkConfig.get_test_owner(),
                     environment=FrameworkConfig.get_test_environment(),
@@ -83,11 +84,14 @@ class TestSessionPlugin:
                     Log.info(f"Test run {test_run.test_run_id} already exists in database")
 
                 self.test_run = test_run
+                # Important: ensure the singleton is set
+                TestRun._instance = test_run
+
         else:
+            # Worker nodes
             test_run_id = os.environ.get('XDIST_TEST_RUN_ID')
             if not test_run_id:
-                raise RuntimeError("Missing test run ID in xdist worker."
-                                   "Ensure master node properly initialized the test run.")
+                raise RuntimeError("Missing test run ID in xdist worker.")
 
             # Retrieve test run data from database
             db = AutomationDatabaseManager.get_database()
@@ -106,6 +110,8 @@ class TestSessionPlugin:
                     test_run_id=test_run_model.test_run_id,
                     test_type=TestRunType(test_run_model.test_type)
                 )
+                # Important: setting singleton also for worker nodes
+                TestRun._instance = self.test_run
 
         self._setup_test_run_logging()
         self.test_case_plugin = TestCasePlugin(self.test_run)
@@ -118,6 +124,7 @@ class TestSessionPlugin:
 
         @param item: pytest test item
         """
+        self._ensure_test_run()
         # Ensure log handler is active
         if not self._log_configured or not self._log_file.exists():
             print("WARNING: Log configuration lost, reconfiguring...")  # Debug
@@ -128,6 +135,7 @@ class TestSessionPlugin:
 
     def pytest_runtest_makereport(self, item, call):
         """Handle test reports and finalize test executions."""
+        self._ensure_test_run()
         if call.when == "call":  # Test has finished executing
             test_execution = self.test_case_plugin.get_current_execution()
             if test_execution:
@@ -186,7 +194,13 @@ class TestSessionPlugin:
         @param session: pytest session object
         @param exitstatus: session exit status
         """
+        self._ensure_test_run()
         if exitstatus == 0:
+            # Calculate actual duration
+            self.test_run.end_time = datetime.now()
+            if self.test_run.start_time:
+                self.test_run.duration = (self.test_run.end_time - self.test_run.start_time).total_seconds()
+
             self.test_run.complete()
 
             # Switch to test run log
@@ -200,7 +214,7 @@ class TestSessionPlugin:
             db = AutomationDatabaseManager.get_database()
             try:
                 with db.session_scope() as session:
-                    # Update TestRun in the DB:
+                    # Update TestRun in the DB with correct duration
                     existing = session.query(TestRun.get_model()) \
                         .filter_by(test_run_id=self.test_run.test_run_id) \
                         .first()
@@ -208,6 +222,7 @@ class TestSessionPlugin:
                         existing.status = self.test_run.status.value
                         existing.end_time = self.test_run.end_time
                         existing.duration = self.test_run.duration
+                        session.commit()
 
                     # Fetching execution records for summary
                     executions = session.query(TestExecutionRecordModel) \
@@ -324,3 +339,12 @@ class TestSessionPlugin:
         logger = Log.get_logger()
         if self._log_handler not in logger.handlers:
             logger.addHandler(self._log_handler)
+
+    def _ensure_test_run(self) -> None:
+        """
+        Ensure TestRun singleton is properly set.
+        Should be called in key plugin hooks to maintain TestRun state.
+        """
+        if not TestRun.get_instance():
+            TestRun._instance = self.test_run
+            Log.debug(f"Restored TestRun singleton: {self.test_run.test_run_id}")

@@ -1,13 +1,11 @@
 import shutil
-from pathlib import Path
 
 from _tests.fixtures import *
+from core.common_paths import CONFIG_DIR, LOG_DIR
 from core.logger import Log
+from core.plugins.test_report_plugin import ReportingPlugin
 from core.plugins.test_session_plugin import TestSessionPlugin
 
-ROOT_DIR = Path(__file__).parent
-CONFIG_DIR = ROOT_DIR / 'config'
-LOG_DIR = ROOT_DIR / 'logs'
 LOGGER_CONFIG_PATH = CONFIG_DIR / 'logger.ini'
 
 
@@ -34,6 +32,9 @@ def pytest_configure(config):
 
     # Initialize plugins
     session_plugin = TestSessionPlugin()
+    # Seems like the registration order makes the finishing order reversed:
+    # Reporting will be finishing after Session
+    config.pluginmanager.register(ReportingPlugin())
     config.pluginmanager.register(session_plugin)
 
 
@@ -61,5 +62,3 @@ def pytest_runtest_teardown(item):
         )
         if disabled_plugin:
             item.config.pluginmanager.register(disabled_plugin)
-
-

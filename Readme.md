@@ -396,6 +396,57 @@ class TestCaseProperties(Enum):
 ```
 
 
+## 📊 Test Reports 
+
+The framework now includes a powerful test reporting system that generates detailed HTML reports after test execution.
+
+### ✨ Features
+
+#### 📝 One Pager Report
+- 📊 Complete test run overview
+- 📈 Interactive metrics dashboard
+- 📋 Test suite summaries
+- 📝 Detailed execution records
+- 📊 Steps and custom metrics visualization
+- 🚀 Support for large test sets
+
+#### 🎨 Themes
+Five built-in themes:
+- 🌟 Modern (default)
+- ⚡ Minimalist  
+- 🌙 Dark
+- 🎮 Retro
+- 📚 Classic
+
+#### ⚙️ Configuration
+```ini
+[REPORT]
+# Report type (one_pager/drilldown)
+type = one_pager
+
+# Sections to include
+sections = main_summary,test_suite_summary,test_case_summary
+
+# Show charts and logs
+show_charts = true
+show_logs = true
+
+# Theme selection
+css_template = modern
+```
+
+#### ⚠️ Known Issues
+
+- 🐛 Step completion status sometimes incorrectly marked (fix coming soon)
+- 🎨 Chart colors may have low contrast in dark theme
+
+#### 🔜 Following Steps
+
+- 📊 Drilldown report implementation
+- 📈 Interactive charts and visualizations
+- 🔍 Enhanced filtering capabilities
+- 📥 Report export functionality
+
 ## 📊 Analytics
 
 ### SQL Analysis Examples
@@ -624,6 +675,3 @@ pytest test_*_e2e.py
 
 Running tests with xdist in single worker mode (-n1) causes issues with TestRun initialization and database management. However, using single worker mode with xdist doesn't provide any benefits over standard pytest execution.
 
----
-
-Made with ❤️ by Your Team Name

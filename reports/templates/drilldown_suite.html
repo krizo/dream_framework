@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{suite_name}} - Test Report</title>
+    <link rel="stylesheet" href="../css/{{config.css_template}}.css">
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="index.html">Main Report</a> > {{suite_name}}
+    </div>
+
+    <header>
+        <h1>{{suite_name}}</h1>
+        <div class="suite-meta">
+            <p>Start Time: {{suite_data.start_time}}</p>
+            <p>End Time: {{suite_data.end_time}}</p>
+            <p>Duration: {{suite_data.duration|round(2)}} seconds</p>
+            {% if test_run.branch %}
+            <p>Branch: {{test_run.branch}}</p>
+            {% endif %}
+        </div>
+    </header>
+
+    <section class="suite-summary">
+        <h2>Suite Summary</h2>
+        <table class="stats-table">
+            <tr>
+                <th>Total Tests</th>
+                <th>Attempted</th>
+                <th>Failed</th>
+                <th>Skipped</th>
+                <th>Pass Rate</th>
+                <th>Result</th>
+            </tr>
+            <tr class="{{suite_data.result|lower}}">
+                <td>{{suite_data.total}}</td>
+                <td>{{suite_data.attempted}}</td>
+                <td>{{suite_data.failed}}</td>
+                <td>{{suite_data.skipped}}</td>
+                <td>{{suite_data.passed_percent|round(2)}}%</td>
+                <td>{{suite_data.result}}</td>
+            </tr>
+        </table>
+    </section>
+
+    <section class="test-cases">
+        <h2>Test Cases</h2>
+        <table>
+            <tr>
+                <th>No</th>
+                {% for col in config.table_config.columns %}
+                <th>{{col}}</th>
+                {% endfor %}
+            </tr>
+            {% for execution in suite_data.executions %}
+            <tr class="{{execution.result|lower}}">
+                <td>{{loop.index}}</td>
+                {% for col in config.table_config.columns %}
+                <td>
+                    {% if col == 'test_name' %}
+                        {{execution.name}}
+                    {% elif col == 'description' %}
+                        {{execution.description}}
+                    {% elif col == 'result' %}
+                        {{execution.result}}
+                    {% elif col == 'duration' %}
+                        {{execution.duration|round(2)}}s
+                    {% elif col == 'failure' %}
+                        {{execution.failure}}
+                    {% elif col == 'test_start' %}
+                        {{execution.start_time}}
+                    {% elif col == 'test_end' %}
+                        {{execution.end_time}}
+                    {% elif col == 'steps' %}
+                        {% if config.show_logs %}
+                            <a href="../logs/{{execution.id}}.html">View Steps</a>
+                        {% else %}
+                            {{execution.steps|length}} steps
+                        {% endif %}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+    </section>
+
+    <footer>
+        <p>Generated on: {{current_time}}</p>
+    </footer>
+</body>
+</html>

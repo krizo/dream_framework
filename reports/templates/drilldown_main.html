@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Report - {{test_run.test_run_id}}</title>
+    <link rel="stylesheet" href="../css/{{config.css_template}}.css">
+</head>
+<body>
+    <header>
+        <h1>Test Execution Report</h1>
+        <div class="report-meta">
+            <p>Run ID: {{test_run.test_run_id}}</p>
+            <p>Environment: {{test_run.environment}}</p>
+            <p>Start Time: {{test_run.start_time}}</p>
+            <p>Duration: {{test_run.duration}} seconds</p>
+            {% if test_run.branch %}
+            <p>Branch: {{test_run.branch}}</p>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if ReportSection.MAIN_SUMMARY in config.sections %}
+    <section class="summary">
+        <h2>Test Summary</h2>
+        <table class="stats-table">
+            <tr>
+                <th>Total Tests</th>
+                <th>Attempted</th>
+                <th>Failed</th>
+                <th>Skipped</th>
+                <th>Pass Rate</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td>{{summary.total}}</td>
+                <td>{{summary.attempted}}</td>
+                <td>{{summary.failed}}</td>
+                <td>{{summary.skipped}}</td>
+                <td>{{summary.passed_percent|round(2)}}%</td>
+                <td class="{{summary.result|lower}}">{{summary.result}}</td>
+            </tr>
+        </table>
+    </section>
+    {% endif %}
+
+    {% if ReportSection.TEST_SUITE_SUMMARY in config.sections %}
+    <section class="suite-summary">
+        <h2>Test Suites</h2>
+        <table>
+            <tr>
+                <th>Suite</th>
+                <th>Total</th>
+                <th>Attempted</th>
+                <th>Failed</th>
+                <th>Skipped</th>
+                <th>Pass Rate</th>
+                <th>Result</th>
+                <th>Duration</th>
+                <th>Details</th>
+            </tr>
+            {% for suite_name, suite in suites.items() %}
+            <tr class="{{suite.result|lower}}">
+                <td>{{suite_name}}</td>
+                <td>{{suite.total}}</td>
+                <td>{{suite.attempted}}</td>
+                <td>{{suite.failed}}</td>
+                <td>{{suite.skipped}}</td>
+                <td>{{suite.passed_percent|round(2)}}%</td>
+                <td>{{suite.result}}</td>
+                <td>{{suite.duration|round(2)}}s</td>
+                <td><a href="suite_{{suite_name|lower|replace(' ', '_')}}.html">View Details</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </section>
+    {% endif %}
+
+    <footer>
+        <p>Generated on: {{current_time}}</p>
+    </footer>
+
+    {% if config.show_charts %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script>
+        // Add charts initialization if needed
+    </script>
+    {% endif %}
+</body>
+</html>
