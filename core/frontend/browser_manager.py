@@ -116,7 +116,7 @@ class BrowserManager:
 
                 window_config = FrontendConfig.get_window_config()
                 if not FrontendConfig.get_browser_options()['headless']:
-                    if window_config['size'] == 'maximized':
+                    if 'maximized' in window_config['size']:
                         cls._driver.maximize_window()
                     else:
                         cls._driver.set_window_size(
