@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+    <div class="header">
+        <h1>{{ icon('folder') }} Test Suite "{{suite_name}}"</h1>
+    </div>
+
+    <div class="metric-container">
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('hash') }} Run ID
+            </div>
+            <div class="metric-value">
+                {{test_run.test_run_id}}
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('monitor') }} Environment
+            </div>
+            <div class="metric-value">
+                {{test_run.environment}}
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('user') }} Owner
+            </div>
+            <div class="metric-value">
+                {{test_run.owner}}
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('calendar') }} Start Time
+            </div>
+            <div class="metric-value">
+                {{suite_data.start_time|format_timestamp}}
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('calendar-check') }} End Time
+            </div>
+            <div class="metric-value">
+                {{suite_data.end_time|format_timestamp}}
+            </div>
+        </div>
+
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('clock') }} Duration
+            </div>
+            <div class="metric-value">
+                {{suite_data.duration|format_duration}}
+            </div>
+        </div>
+
+        {% if test_run.branch %}
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('git-branch') }} Branch
+            </div>
+            <div class="metric-value">
+                {{test_run.branch}}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if test_run.status %}
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('activity') }} Status
+            </div>
+            <div class="metric-value">
+                {{test_run.status}}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if test_run.app_under_test %}
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('package') }} Application
+            </div>
+            <div class="metric-value">
+                {{test_run.app_under_test}}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if test_run.app_version %}
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('tag') }} Version
+            </div>
+            <div class="metric-value">
+                {{test_run.app_version}}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>{{ icon('pie-chart') }} Test Suite Summary</h2>
+        <div class="table-wrapper">
+            <table class="suite-summary-table">
+                <thead>
+                    <tr>
+                        <th>{{ icon('check-circle') }} Tests Passed</th>
+                        <th>{{ icon('x-circle') }} Tests Failed</th>
+                        <th>{{ icon('skip-forward') }} Tests Skipped</th>
+                        <th>{{ icon('layers') }} Total Tests</th>
+                        <th>{{ icon('percent') }} Pass Rate</th>
+                        <th>{{ icon('check-circle') }} Result</th>
+                        <th>{{ icon('clock') }} Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="test-row-{{suite_data.result|lower}}">
+                        <td>{{suite_data.attempted - suite_data.failed}}</td>
+                        <td>{{suite_data.failed}}</td>
+                        <td>{{suite_data.skipped}}</td>
+                        <td>{{suite_data.total}}</td>
+                        <td>{{suite_data.passed_percent|round(2)}}%</td>
+                        <td>
+                            <span class="status-{{suite_data.result|lower}}">
+                                {{ render_status_icon(suite_data.result) }}
+                                <span>{{suite_data.result}}</span>
+                            </span>
+                        </td>
+                        <td>{{suite_data.duration|format_duration}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>{{ icon('list') }} Test Executions </h2>
+        <div class="table-wrapper">
+            <table class="execution-table">
+                <thead>
+                    <tr>
+                        <th>{{ icon('hash') }} No.</th>
+                        {% for col in config.table_config.columns %}
+                        <th>{{ get_column_header(col) }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for execution in suite_data.executions %}
+                    <tr class="test-row-{{execution.result|lower}}">
+                        <td>{{loop.index}}</td>
+                        {% for col in config.table_config.columns %}
+                            <td data-column="{{col}}">
+                                {%- if col == 'test_name' -%}
+                                    {{execution.test_case.name if execution.test_case else execution.name}}
+                                {%- elif col == 'test_function' -%}
+                                    {{execution.test_function}}
+                                {%- elif col == 'description' -%}
+                                    {{execution.test_case.description if execution.test_case else execution.description}}
+                                {%- elif col == 'result' -%}
+                                    <span class="status-{{execution.result|lower}}">
+                                        {{ render_status_icon(execution.result) }}
+                                        <span>{{execution.result|upper}}</span>
+                                    </span>
+                                {%- elif col == 'duration' -%}
+                                    {{execution.duration|format_duration if execution.duration is not none else 'N/A'}}
+                                {%- elif col == 'failure' -%}
+                                    {% if execution.failure %}
+                                    <div class="failure-message">
+                                        {{ icon('alert-triangle') }} {{execution.failure}}
+                                    </div>
+                                    {% endif %}
+                                {%- elif col == 'failure_type' -%}
+                                    {{execution.failure_type}}
+                                {%- elif col == 'test_start' -%}
+                                    {{execution.start_time|format_timestamp}}
+                                {%- elif col == 'test_end' -%}
+                                    {{execution.end_time|format_timestamp}}
+                                {%- elif col == 'steps' -%}
+                                    {% if execution.steps %}
+                                        <a href="steps_logs/{{execution.test_function}}_steps.html" target="_blank">
+                                            {{ icon('list') }} View Steps ({{execution.steps|length}})
+                                        </a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                {%- elif col == 'custom_metrics' -%}
+                                    {% if execution.custom_metrics %}
+                                        <a href="metrics_logs/{{execution.test_function}}_metrics.html" target="_blank">
+                                            {{ icon('bar-chart-2') }} View Metrics ({{execution.custom_metrics|length}})
+                                        </a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                {%- endif -%}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="report_{{test_run.test_run_id}}_drilldown.html" class="back-link">{{ icon('arrow-left') }} Back to Summary</a>
+    </div>
+</div>
+
+{% endblock %}

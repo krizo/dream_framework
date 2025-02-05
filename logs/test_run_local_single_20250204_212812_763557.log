@@ -1,0 +1,79 @@
+================================================================================
+2025-02-04 21:28:12 | INFO     | Starting Test Run: test_run_local_single_20250204_212812_763557
+2025-02-04 21:28:12 | INFO     | Type: single
+2025-02-04 21:28:12 | INFO     | Environment: dev
+2025-02-04 21:28:12 | INFO     | Owner: kriz
+2025-02-04 21:28:12 | INFO     | Start Time: 2025-02-04 21:28:12.981524
+2025-02-04 21:28:12 | INFO     | Application: example_app v1.0.0
+2025-02-04 21:28:12 | INFO     | Branch: None
+================================================================================
+2025-02-04 21:28:12 | INFO     | Test session started with logging configured
+2025-02-04 21:28:13 | INFO     | Process 67479: Resetting TestRun
+2025-02-04 21:28:13 | DEBUG    | Restored TestRun singleton: test_run_local_single_20250204_212812_763557
+2025-02-04 21:28:13 | INFO     | Test location: _tests/integration/test_steps_e2e_pokemon_battle.py::test_e2e_pokemon_battle_workflow
+2025-02-04 21:28:13 | INFO     | Test name: Pokemon Battle Simulation
+2025-02-04 21:28:13 | INFO     | Test description: Test Pokemon battle mechanics using PokeAPI
+2025-02-04 21:28:13 | INFO     | Test suite: Pokemon API Tests
+2025-02-04 21:28:13 | INFO     | Created new test case with ID: 1
+2025-02-04 21:28:13 | INFO     | Starting test execution of test_e2e_pokemon_battle_workflow
+================================================================================
+2025-02-04 21:28:14 | INFO     | Test Run Summary
+--------------------------------------------------------------------------------
+2025-02-04 21:28:14 | INFO     | Total tests: 2
+2025-02-04 21:28:14 | INFO     | Passed: 2
+2025-02-04 21:28:14 | INFO     | Failed: 0
+--------------------------------------------------------------------------------
+2025-02-04 21:28:14 | INFO     | Test: test_e2e_pokemon_battle_workflow
+2025-02-04 21:28:14 | INFO     |   Result: passed
+2025-02-04 21:28:14 | INFO     |   Duration: 0.93s
+2025-02-04 21:28:14 | INFO     |   Metrics:
+2025-02-04 21:28:14 | INFO     |     charizard_hp: 78
+2025-02-04 21:28:14 | INFO     |     charizard_attack: 84
+2025-02-04 21:28:14 | INFO     |     charizard_defense: 78
+2025-02-04 21:28:14 | INFO     |     charizard_special-attack: 109
+2025-02-04 21:28:14 | INFO     |     charizard_special-defense: 85
+2025-02-04 21:28:14 | INFO     |     charizard_speed: 100
+2025-02-04 21:28:14 | INFO     |     blastoise_hp: 79
+2025-02-04 21:28:14 | INFO     |     blastoise_attack: 83
+2025-02-04 21:28:14 | INFO     |     blastoise_defense: 100
+2025-02-04 21:28:14 | INFO     |     blastoise_special-attack: 85
+2025-02-04 21:28:14 | INFO     |     blastoise_special-defense: 105
+2025-02-04 21:28:14 | INFO     |     blastoise_speed: 78
+2025-02-04 21:28:14 | INFO     |     charizard_ability: solar-power
+2025-02-04 21:28:14 | INFO     |     blastoise_ability: rain-dish
+2025-02-04 21:28:14 | INFO     |     charizard_effectiveness: 0.5
+2025-02-04 21:28:14 | INFO     |     blastoise_effectiveness: 2.0
+--------------------------------------------------------------------------------
+2025-02-04 21:28:14 | INFO     | Test: test_e2e_error_handling
+2025-02-04 21:28:14 | INFO     |   Result: passed
+2025-02-04 21:28:14 | INFO     |   Duration: 0.12s
+--------------------------------------------------------------------------------
+2025-02-04 21:28:14 | INFO     | Test run test_run_local_single_20250204_212812_763557 completed in 1.16s
+================================================================================
+2025-02-04 21:28:14 | INFO     | Starting report generation...
+2025-02-04 21:28:14 | INFO     | Report directory: /Users/kbober/PycharmProjects/automation_framework_standalone/logs/reports
+2025-02-04 21:28:14 | INFO     | Starting report generation for test run: test_run_local_single_20250204_212812_763557
+2025-02-04 21:28:14 | INFO     | Found 2 test executions
+2025-02-04 21:28:14 | DEBUG    | Calculated summary: {'total': 2, 'attempted': 2, 'failed': 0, 'skipped': 0, 'passed_percent': 100.0, 'result': 'PASSED'}
+2025-02-04 21:28:14 | DEBUG    | Calculated summaries for 1 test suites
+2025-02-04 21:28:14 | INFO     | Rendering report to directory: /Users/kbober/PycharmProjects/automation_framework_standalone/logs/reports
+2025-02-04 21:28:14 | DEBUG    | Copied base layout CSS
+2025-02-04 21:28:14 | DEBUG    | Copied step logs CSS
+2025-02-04 21:28:14 | DEBUG    | Copied custom metrics CSS
+2025-02-04 21:28:14 | INFO     | Generated report: /Users/kbober/PycharmProjects/automation_framework_standalone/logs/reports/report_test_run_local_single_20250204_212812_763557_one_pager.html
+2025-02-04 21:28:14 | INFO     | Test report generated successfully: /Users/kbober/PycharmProjects/automation_framework_standalone/logs/reports/report_test_run_local_single_20250204_212812_763557_one_pager.html
+================================================================================
+2025-02-04 21:28:14 | INFO     | Test Run Summary
+--------------------------------------------------------------------------------
+2025-02-04 21:28:14 | INFO     | Test Run: test_run_local_single_20250204_212812_763557
+2025-02-04 21:28:14 | INFO     | Environment: dev
+2025-02-04 21:28:14 | INFO     | Type: single
+2025-02-04 21:28:14 | INFO     | Start Time: 2025-02-04 21:28:12.981524
+2025-02-04 21:28:14 | INFO     | End Time: 2025-02-04 21:28:14.140888
+2025-02-04 21:28:14 | INFO     | Duration: 1.16s
+2025-02-04 21:28:14 | INFO     | Total Tests: 2
+2025-02-04 21:28:14 | INFO     | Report Type: one_pager
+2025-02-04 21:28:14 | INFO     | Generation Time: 2025-02-04 21:28:14.195144
+2025-02-04 21:28:14 | INFO     | Report Generation Duration: 1.43s
+================================================================================
+2025-02-04 21:28:14 | INFO     | Report plugin cleanup completed

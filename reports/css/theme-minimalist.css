@@ -1,0 +1,89 @@
+/* Minimalist theme */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #34495e;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --info-color: #3498db;
+    --background-color: #ffffff;
+    --text-color: #2c3e50;
+    --border-color: #ecf0f1;
+    --card-background: #ffffff;
+    --hover-color: #f8f9fa;
+    --header-text-color: #2c3e50;
+    --table-header-bg: #ecf0f1;
+    --table-header-text: #2c3e50;
+    --success-bg: rgba(39, 174, 96, 0.05);
+    --warning-bg: rgba(243, 156, 18, 0.05);
+    --danger-bg: rgba(231, 76, 60, 0.05);
+    --shadow: none;
+}
+
+body {
+    background: var(--background-color);
+    color: var(--text-color);
+}
+
+.header {
+    background: var(--background-color);
+    color: var(--header-text-color);
+    border-bottom: 2px solid var(--border-color);
+    border-radius: 0;
+}
+
+.metric {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+}
+
+.section {
+    background: var(--card-background);
+    border: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+th {
+    background: var(--table-header-bg);
+    color: var(--table-header-text);
+    font-weight: 600;
+}
+
+td {
+    border-bottom: 1px solid var(--border-color);
+}
+
+tr.test-row-passed {
+    background: var(--success-bg);
+}
+
+tr.test-row-failed {
+    background: var(--danger-bg);
+}
+
+tr.test-row-skipped {
+    background: var(--warning-bg);
+}
+
+.test-suite {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    margin-top: 3rem;
+}
+
+.test-suite h3 {
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+a {
+    color: var(--info-color);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-color);
+}
+
+a:hover {
+    border-bottom: 1px solid var(--info-color);
+    text-decoration: none;
+}

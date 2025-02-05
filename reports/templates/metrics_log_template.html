@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Metrics Log</title>
+    <link rel="stylesheet" href="../css/custom_metrics_logs.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Test Metrics Log</h1>
+        </div>
+
+        <div class="metadata">
+            <div class="metadata-item">
+                <span class="metadata-label">Test Function:</span>
+                <span class="metadata-value">{{ test_function }}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Test Name:</span>
+                <span class="metadata-value">{{ test_case_name }}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Total Metrics:</span>
+                <span class="metadata-value">{{ total_metrics }}</span>
+            </div>
+        </div>
+
+        <div class="metrics-container">
+            <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                <tbody>
+                {% for metric in metrics %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ metric.name }}</td>
+                        <td>{{ metric.value }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

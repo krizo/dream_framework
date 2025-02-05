@@ -1,0 +1,91 @@
+/* Dark theme */
+:root {
+    --primary-color: #6366f1;
+    --secondary-color: #818cf8;
+    --success-color: #22c55e;
+    --warning-color: #eab308;
+    --danger-color: #ef4444;
+    --info-color: #3b82f6;
+    --background-color: #0f172a;
+    --text-color: #e2e8f0;
+    --border-color: #1e293b;
+    --card-background: #1e293b;
+    --hover-color: #334155;
+    --header-text-color: #ffffff;
+    --table-header-bg: #1e293b;
+    --table-header-text: #ffffff;
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --warning-bg: rgba(234, 179, 8, 0.1);
+    --danger-bg: rgba(239, 68, 68, 0.1);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body {
+    background: var(--background-color);
+    color: var(--text-color);
+}
+
+.header {
+    background: var(--card-background);
+    color: var(--header-text-color);
+    box-shadow: var(--shadow);
+}
+
+.metric {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.section {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+th {
+    background: var(--table-header-bg);
+    color: var(--table-header-text);
+    border-bottom: 1px solid var(--border-color);
+}
+
+td {
+    border-bottom: 1px solid var(--border-color);
+}
+
+tr:hover {
+    background: var(--hover-color);
+}
+
+tr.test-row-passed {
+    background: var(--success-bg);
+}
+
+tr.test-row-failed {
+    background: var(--danger-bg);
+}
+
+tr.test-row-skipped {
+    background: var(--warning-bg);
+}
+
+.test-suite {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.test-suite h3 {
+    color: var(--header-text-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+a {
+    color: var(--info-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}

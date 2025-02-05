@@ -1,0 +1,137 @@
+body {
+    margin: 0;
+    padding: 30px;
+    background: #edf2f7;
+    color: #000;
+    font-family: 'Consolas', 'Courier New', monospace;
+    line-height: 1.4;
+}
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+.header {
+    background: #2d3748;
+    color: white;
+    padding: 20px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: normal;
+    color: white;
+}
+.metadata {
+    background: #f7fafc;
+    padding: 20px;
+    margin-bottom: 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+.metadata-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 8px 0;
+    color: #000;
+}
+.metadata-label {
+    color: #4a5568;
+    min-width: 120px;
+    font-weight: 500;
+}
+.log-container {
+    background: #fff;
+    padding: 20px;
+}
+.step {
+    display: grid;
+    grid-template-columns: 200px 60px 1fr;
+    padding: 6px 12px;
+    gap: 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #edf2f7;
+    color: #000;
+    align-items: baseline;
+}
+.step:hover {
+    background: #f7fafc;
+}
+.timestamp {
+    color: #4a5568;
+    white-space: nowrap;
+}
+.step-number {
+    color: #0052cc;
+    font-weight: 500;
+}
+.step-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-left: calc(20px * var(--indent-level));
+}
+.step-content-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+.step-status {
+    color: #28a745;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.step-status-failed {
+    color: #dc2626;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+}
+
+[data-lucide] {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+}
+.header [data-lucide] {
+    stroke: white;
+}
+.cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: white;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 5px;
+}
+@keyframes blink {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #f7fafc;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border: 2px solid #f7fafc;
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}

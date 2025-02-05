@@ -1,0 +1,22 @@
+{# Helper macro for icons #}
+{% macro icon(name, class='') %}
+<i data-lucide="{{ name }}" {% if class %}class="{{ class }}"{% endif %}></i>
+{% endmacro %}
+
+{# Helper function for column headers #}
+{% macro get_column_header(col) %}
+{% set headers = {
+    'test_name': ('Test Name', 'file-text'),
+    'test_function': ('Function', 'code'),
+    'description': ('Description', 'file'),
+    'result': ('Result', 'check-circle'),
+    'duration': ('Duration', 'clock'),
+    'failure': ('Failure', 'alert-triangle'),
+    'failure_type': ('Failure Type', 'alert-octagon'),
+    'test_start': ('Start Time', 'calendar'),
+    'test_end': ('End Time', 'calendar-check'),
+    'steps': ('Steps', 'list')
+} %}
+{% set header = headers[col] %}
+{{ icon(header[1]) }} {{ header[0] }}
+{% endmacro %}

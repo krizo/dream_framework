@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Execution Report</title>
+
+    <!-- Base layout and selected theme -->
+    <link rel="stylesheet" href="css/base-layout.css">
+    <link rel="stylesheet" href="{{ css_path }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.min.css">
+
+</head>
+<body>
+    <!-- Main content -->
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            Generated on: {{ current_time|format_timestamp }}
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <!-- Initialize icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+
+    {% if config.show_charts %}
+    <!-- Chart initialization -->
+    {% include "partials/chart_scripts.html" %}
+    {% endif %}
+
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+production:
+  hostname: foo.example.com
+  api_prefix: api.example.com
+  ui_base: https://www.example.com
+  database:
+    server: db.example.com
+    name: nba_players
+  service_stats:
+    url: api.example.com/stats/rest/
+
+staging:
+  hostname: staging.example.com
+  api_prefix: api-staging.example.com
+  ui_base: https://staging.example.com
+  database:
+    server: db-staging.example.com
+    name: nba_players_staging
+  service_stats:
+    url: api-staging.example.com/stats/rest/
+
+development:
+  hostname: localhost
+  api_prefix: localhost:8000
+  ui_base: http://localhost:3000
+  database:
+    server: localhost
+    name: nba_players_dev
+  service_stats:
+    url: localhost:8000/stats/rest/
