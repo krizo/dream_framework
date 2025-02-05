@@ -1,3 +1,7 @@
+filelock~=3.16.1           # For locking TestRun info into a file
+GitPython~=3.1.44          # For getting git branch
+Jinja2~=3.1.4              # Template engine for reporting system
+MarkupSafe~=3.0.2
 numpy~=2.1.2
 psycopg2-binary==2.9.9     # PostreSQL driver for odbc
 pydantic==2.9.2            # Data validation library
@@ -7,9 +11,7 @@ pytest-xdist==3.6.1        # pytestes plugin to run multiple tests at the same t
 PyYAML~=6.0.2              # Handling yml files
 requests~=2.32.3           # For sending API requests
 responses==0.24.1          # Mock HTTP responses
+selenium~=4.28.1
 SQLAlchemy==2.0.36         # SQL toolkit and ORM
 sqlalchemy-pyodbc-mssql==0.1.1  # MSSQL dialect for SQLAlchemy
-filelock~=3.16.1           # For locking TestRun info into a file
-Jinja2~=3.1.4              # Template engine for reporting system
-selenium~=4.28.1
-MarkupSafe~=3.0.2
+webdriver-manager~=4.0.2

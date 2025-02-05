@@ -6,6 +6,7 @@ from sqlite3 import IntegrityError
 
 from core.automation_database_manager import AutomationDatabaseManager
 from core.configuration.framework_config import FrameworkConfig
+from core.frontend.browser_manager import BrowserManager
 from core.logger import Log
 from core.plugins.test_case_plugin import TestCasePlugin
 from core.test_execution_record import TestExecutionRecord
@@ -200,6 +201,7 @@ class TestSessionPlugin:
         @param exitstatus: session exit status
         """
         self._ensure_test_run()
+        BrowserManager.close()
 
         # Update test run status
         if exitstatus == 0:

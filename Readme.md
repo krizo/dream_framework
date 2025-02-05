@@ -627,6 +627,84 @@ def analyze_performance_trends(test_case_id: int, metric_name: str = 'processing
         return trends
 ```
 
+## 🌐 Frontend Testing
+
+The framework provides automated browser management through the `BrowserManager` class.
+
+### Key Features
+* Single browser instance management via Singleton pattern
+* Automated webdriver downloads
+* Screenshot capabilities
+* Configurable timeouts 
+* Headless mode support
+* Multiple browser support (Chrome, Firefox, Edge)
+
+### Configuration
+```ini
+[FRONTEND]
+# Browser configuration
+browser_type = chrome 
+browser_path = /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+chromedriver_path = /usr/local/bin/chromedriver
+
+# Window configuration
+window_size = maximized  # Options: maximized, custom
+window_width = 1920     # Used if window_size = custom
+window_height = 1080    # Used if window_size = custom
+
+# Browser options
+headless = false
+incognito = true
+disable_infobars = true
+disable_notifications = true
+disable_extensions = true
+disable_gpu = true
+accept_insecure_certs = true
+
+# Timeouts (seconds)
+page_load_timeout = 30
+implicit_wait = 10
+explicit_wait = 20
+```
+
+### Usage
+
+```python
+from core.browser_manager import BrowserManager, BrowserType
+
+# Initialize browser
+browser = BrowserManager.initialize(BrowserType.CHROME)
+driver = browser.get_driver()
+
+# Use in tests
+driver.get("https://example.com")
+driver.find_element(By.ID, "login").click()
+
+# Take screenshot
+browser.get_screenshot("login_page")
+
+# Clear cookies
+browser.clear_cookies()
+```
+
+### MacOS Setup
+
+```commandline
+# Install via Homebrew
+brew install chromedriver
+
+# Set permissions
+chmod +x /usr/local/bin/chromedriver
+```
+
+## Framework Browser Management
+
+- Browser initializes automatically based on configuration
+- Single instance persists across tests by default
+- Closes automatically after test session
+- Takes screenshots on demand or test failures
+- Manages cookies and browser state
+
 ## 💡 Best Practices
 
 During implementing your tests remember about few things that will help you keep them stable, well-structured and organized: 
