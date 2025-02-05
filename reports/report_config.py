@@ -19,9 +19,10 @@ class ReportType(Enum):
 
 class ReportSection(Enum):
     """Available report sections."""
-    MAIN_SUMMARY = "main_summary"
-    TEST_RESULTS = "test_results"
-    TEST_CASE_SUMMARY = "test_case_summary"
+    MAIN_SUMMARY = "main_summary"      # Overall test run summary
+    TEST_RESULTS = "test_results"      # Test results by suite
+    TEST_CASE_SUMMARY = "test_case_summary"  # Detailed test cases
+    SUITE_DETAILS = "suite_details"    # Per-suite detailed view
 
 
 @dataclass
@@ -54,13 +55,35 @@ class ReportConfig:
         if not self.template_dir.exists():
             raise ValueError(f"Template directory does not exist: {self.template_dir}")
 
-        valid_templates = ["modern", "minimalist", "dark", "retro", "classic"]
-        if self.css_template not in valid_templates:
-            Log.warning(f"Invalid CSS template '{self.css_template}', using 'modern'")
-            self.css_template = "modern"
+        # Validate and set CSS template
+        self._set_css_template(self.css_template)
+
+        # Convert string values to proper types
+        self.show_logs = bool(self.show_logs)
+        self.show_charts = bool(self.show_charts)
+
+        # Validate sections
+        if not self.sections:
+            raise ValueError("At least one section must be specified")
+
+        # Ensure all sections are valid ReportSection instances
+        self.sections = [s if isinstance(s, ReportSection) else ReportSection(s) for s in self.sections]
+
+        # Ensure report type is valid
+        if not isinstance(self.report_type, ReportType):
+            raise ValueError(f"Invalid report type: {self.report_type}")
 
         # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _set_css_template(self, template: str):
+        """Set CSS template with validation."""
+        valid_templates = ["modern", "minimalist", "dark", "retro", "classic"]
+        if template not in valid_templates:
+            Log.warning(f"Invalid CSS template '{template}', using 'modern'")
+            self.css_template = "modern"
+        else:
+            self.css_template = template
 
 
 class ReportConfigParser(ConfigParser):
@@ -117,7 +140,7 @@ class ReportConfigParser(ConfigParser):
             report_type = ReportType.ONE_PAGER
 
         # Parse sections
-        sections_str = cls.get_value('sections', 'main_summary,test_suite_summary,test_case_summary')
+        sections_str = cls.get_value('sections', 'main_summary,test_results')
         sections = []
         try:
             section_names = cls._parse_string_list(sections_str)
@@ -131,7 +154,7 @@ class ReportConfigParser(ConfigParser):
 
         # Use defaults if no valid sections found
         if not sections:
-            sections = [ReportSection.MAIN_SUMMARY, ReportSection.TEST_SUITE_SUMMARY, ReportSection.TEST_CASE_SUMMARY]
+            sections = [ReportSection.MAIN_SUMMARY, ReportSection.TEST_RESULTS]
 
         # Parse columns with defaults
         columns_value = cls.get_value('columns', cls.DEFAULT_COLUMNS)
@@ -154,6 +177,11 @@ class ReportConfigParser(ConfigParser):
         output_dir_str = cls.get_value('output_dir')
         output_dir = Path(output_dir_str) if output_dir_str else DEFAULT_OUTPUT_DIR
 
+        # Parse boolean values
+        show_logs = cls.get_value('show_logs', True)
+        show_charts = cls.get_value('show_charts', True)
+        css_template = cls.get_value('css_template', 'modern')
+
         # Create configuration
         return ReportConfig(
             report_type=report_type,
@@ -163,9 +191,9 @@ class ReportConfigParser(ConfigParser):
                 custom_columns=custom_columns,
                 failed_threshold=failed_threshold
             ),
-            show_logs=cls.get_value('show_logs', True),
-            show_charts=cls.get_value('show_charts', True),
-            css_template=cls.get_value('css_template', 'default'),
+            show_logs=show_logs,
+            show_charts=show_charts,
+            css_template=css_template,
             template_dir=TEMPLATES_DIR,
             output_dir=output_dir
         )

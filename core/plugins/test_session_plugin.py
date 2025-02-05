@@ -6,6 +6,7 @@ from sqlite3 import IntegrityError
 
 from core.automation_database_manager import AutomationDatabaseManager
 from core.configuration.framework_config import FrameworkConfig
+from core.frontend.browser_manager import BrowserManager
 from core.logger import Log
 from core.plugins.test_case_plugin import TestCasePlugin
 from core.test_execution_record import TestExecutionRecord
@@ -28,6 +29,7 @@ class TestSessionPlugin:
         self._log_configured = False
         self._log_file = None
         self._log_handler = None
+        self._report_dir = None
 
     def pytest_configure(self, config):
         """
@@ -113,7 +115,11 @@ class TestSessionPlugin:
                 # Important: setting singleton also for worker nodes
                 TestRun._instance = self.test_run
 
+        # Configure base logging for test run
         self._setup_test_run_logging()
+        Log.info("Test session started with logging configured")
+
+        # Initialize TestCasePlugin
         self.test_case_plugin = TestCasePlugin(self.test_run)
         config.pluginmanager.register(self.test_case_plugin)
 
@@ -189,12 +195,15 @@ class TestSessionPlugin:
     def pytest_sessionfinish(self, session, exitstatus):
         """
         Handle test session completion.
-        Updates test run status and ensures all logs are written.
+        Updates test run status and generates final report.
 
         @param session: pytest session object
         @param exitstatus: session exit status
         """
         self._ensure_test_run()
+        BrowserManager.close()
+
+        # Update test run status
         if exitstatus == 0:
             # Calculate actual duration
             self.test_run.end_time = datetime.now()
@@ -308,12 +317,10 @@ class TestSessionPlugin:
         log_dir.mkdir(parents=True, exist_ok=True)
         self._log_file = log_dir / f"{self.test_run.test_run_id}.log"
 
-        # calculate the dates between two days
-
         # Configure main test run logging
         Log.reconfigure_file_handler(str(self._log_file))
 
-        # Log test run info - only setup
+        # Log test run info
         Log.separator("=")
         Log.info(f"Starting Test Run: {self.test_run.test_run_id}")
         Log.info(f"Type: {self.test_run.test_type.value}")
@@ -327,18 +334,6 @@ class TestSessionPlugin:
         Log.separator("=")
 
         self._log_configured = True
-
-    def _ensure_log_handler(self) -> None:
-        """
-        Ensure log handler is active and properly configured.
-        Re-adds handler if it was removed or not found.
-        """
-        if not self._log_handler:
-            return
-
-        logger = Log.get_logger()
-        if self._log_handler not in logger.handlers:
-            logger.addHandler(self._log_handler)
 
     def _ensure_test_run(self) -> None:
         """

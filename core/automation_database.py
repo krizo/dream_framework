@@ -17,7 +17,7 @@ class AutomationDatabase:
     """
     Main database handler supporting both TestCase and TestExecutionRecord operations.
     Provides schema management and CRUD operations for test automation data.
-    """
+"""
 
     def __init__(self, db_url: str, dialect: Optional[str] = None):
         """

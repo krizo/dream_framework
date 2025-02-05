@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
+from sqlalchemy.orm import joinedload
 
 from core.automation_database import AutomationDatabase
 from core.common_paths import TEMPLATES_DIR
@@ -88,11 +89,24 @@ class ReportGenerator:
 
                 executions = session.query(TestExecutionRecordModel) \
                     .filter_by(test_run_id=test_run_id) \
+                    .options(
+                    joinedload(TestExecutionRecordModel.steps),
+                    joinedload(TestExecutionRecordModel.custom_metrics),
+                    joinedload(TestExecutionRecordModel.test_case)
+                ) \
                     .order_by(TestExecutionRecordModel.start_time) \
                     .all()
 
                 Log.info(f"Found {len(executions)} test executions")
-                report_data = self._prepare_report_data(test_run, executions)
+
+                # Prepare report data
+                report_data = ReportData(
+                    test_run=test_run,
+                    executions=executions,
+                    summary=self._calculate_summary(executions),
+                    suite_summaries=self._calculate_suite_summaries(executions)
+                )
+
                 return self._render_report(report_data, output_dir)
 
         except Exception as e:
@@ -126,8 +140,7 @@ class ReportGenerator:
         Log.debug(f"Calculated summary: {summary}")
         return summary
 
-    @staticmethod
-    def _calculate_suite_summaries(executions: List[TestExecutionRecordModel]) -> Dict[str, Dict[str, Any]]:
+    def _calculate_suite_summaries(self, executions: List[TestExecutionRecordModel]) -> Dict[str, Dict[str, Any]]:
         """
         Calculate summary statistics per test suite.
 
@@ -183,26 +196,6 @@ class ReportGenerator:
         Log.debug(f"Calculated summaries for {len(suites)} test suites")
         return suites
 
-    def _prepare_report_data(self, test_run: TestRunModel,
-                             executions: List[TestExecutionRecordModel]) -> ReportData:
-        """
-        Prepare data for report.
-
-        @param test_run: Test run model
-        @param executions: List of test executions
-        @return: ReportData instance
-        """
-        summary = self._calculate_summary(executions)
-        suite_summaries = self._calculate_suite_summaries(executions)
-
-        Log.debug("Report data prepared successfully")
-        return ReportData(
-            test_run=test_run,
-            executions=executions,
-            summary=summary,
-            suite_summaries=suite_summaries
-        )
-
     def _render_report(self, data: ReportData, output_dir: Path) -> Path:
         """
         Render report from templates.
@@ -218,34 +211,49 @@ class ReportGenerator:
         logs_dir = output_dir / 'steps_logs'
         logs_dir.mkdir(exist_ok=True)
 
+        metrics_dir = output_dir / 'metrics_logs'
+        metrics_dir.mkdir(exist_ok=True)
+
         # Copy CSS files
+        css_dir = output_dir / 'css'
+        css_dir.mkdir(exist_ok=True)
+
         self._copy_css_files(output_dir)
 
-        # Generate logs if enabled
+        # Generate additional logs if enabled
         if self.config.show_logs:
             for execution in data.executions:
+                # Generate steps logs
                 if execution.steps:
-                    steps_path = ReportComponentFactory.get_steps_log_path(output_dir=output_dir,
-                                                                           test_function=execution.test_function)
-                    ReportComponentFactory.create_steps_log_page(steps=execution.steps, output_path=steps_path,
-                                                                 test_function=execution.test_function)
+                    steps_path = ReportComponentFactory.get_steps_log_path(
+                        output_dir=output_dir,
+                        test_function=execution.test_function
+                    )
+                    ReportComponentFactory.create_steps_log_page(
+                        steps=execution.steps,
+                        output_path=steps_path,
+                        test_function=execution.test_function
+                    )
 
                 # Generate metrics logs
                 if execution.custom_metrics:
                     metrics_path = ReportComponentFactory.get_metrics_log_path(
                         output_dir=output_dir,
-                        test_function=execution.test_function)
+                        test_function=execution.test_function
+                    )
                     ReportComponentFactory.create_metrics_log_page(
                         execution=execution,
                         output_path=metrics_path,
                         test_function=execution.test_function
                     )
+
         try:
-            # Select and render template
+            # Select template based on report type
             template_name = 'one_pager.html' if self.config.report_type == ReportType.ONE_PAGER else 'drilldown_main.html'
             template = self.jinja_env.get_template(template_name)
 
             # Render main template
+            css_path = f"css/theme-{self.config.css_template}.css"
             content = template.render(
                 config=self.config,
                 test_run=data.test_run,
@@ -253,12 +261,11 @@ class ReportGenerator:
                 suites=data.suite_summaries,
                 current_time=datetime.now(),
                 ReportSection=ReportSection,
-                css_path=f"css/{self.config.css_template}.css"
+                css_path=css_path
             )
 
             # Save output
-            output_file = output_dir / (
-                f"report_{data.test_run.test_run_id}.html" if self.config.report_type == ReportType.ONE_PAGER else "index.html")
+            output_file = output_dir / f"report_{data.test_run.test_run_id}_{self.config.report_type.value}.html"
             output_file.write_text(content)
 
             # Generate additional pages for drilldown report
@@ -280,10 +287,12 @@ class ReportGenerator:
         @param output_dir: Output directory
         """
         suite_template = self.jinja_env.get_template('drilldown_suite.html')
+
         for suite_name, suite_data in data.suite_summaries.items():
             safe_name = suite_name.lower().replace(' ', '_')
             suite_file = output_dir / f"suite_{safe_name}.html"
 
+            css_path = f"css/theme-{self.config.css_template}.css"
             content = suite_template.render(
                 config=self.config,
                 test_run=data.test_run,
@@ -291,8 +300,9 @@ class ReportGenerator:
                 suite_data=suite_data,
                 current_time=datetime.now(),
                 ReportSection=ReportSection,
-                css_path=f"css/{self.config.css_template}.css"
+                css_path=css_path
             )
+
             suite_file.write_text(content)
             Log.debug(f"Generated suite page: {suite_file}")
 
@@ -329,21 +339,30 @@ class ReportGenerator:
             'PASSED': ('check-circle', 'status-passed'),
             'FAILED': ('x-circle', 'status-failed'),
             'SKIPPED': ('alert-circle', 'status-skipped')
-        }
-        icon_name, class_name = icon_map.get(status, ('help-circle', ''))
+            }
+        icon_name, class_name = icon_map.get(status.upper(), ('help-circle', ''))
         return self._render_icon(icon_name, class_name)
 
     def _copy_css_files(self, output_dir: Path) -> None:
         """
-        Copy CSS files to output directory.
-        Includes base layout, theme file, steps and custom metrics CSS.
+        Coordinate copying of all CSS files to output directory.
 
         @param output_dir: Output directory path
         """
         css_dir = output_dir / 'css'
         css_dir.mkdir(exist_ok=True)
 
-        # Copy base layout CSS
+        self._copy_base_layout_css(css_dir)
+        self._copy_step_logs_css(css_dir)
+        self._copy_custom_metrics_css(css_dir)
+        self._copy_theme_css(css_dir)
+
+    def _copy_base_layout_css(self, css_dir: Path) -> None:
+        """
+        Copy base layout CSS file.
+
+        @param css_dir: CSS output directory
+        """
         base_css_src = self.config.template_dir.parent / 'css' / 'base-layout.css'
         if not base_css_src.exists():
             Log.error(f"Base layout CSS not found: {base_css_src}")
@@ -353,7 +372,12 @@ class ReportGenerator:
         base_css_dest.write_text(base_css_src.read_text())
         Log.debug("Copied base layout CSS")
 
-        # Copy step logs CSS
+    def _copy_step_logs_css(self, css_dir: Path) -> None:
+        """
+        Copy step logs CSS file.
+
+        @param css_dir: CSS output directory
+        """
         steps_css_src = self.config.template_dir.parent / 'css' / 'step_logs.css'
         if steps_css_src.exists():
             steps_css_dest = css_dir / 'step_logs.css'
@@ -362,7 +386,12 @@ class ReportGenerator:
         else:
             Log.warning(f"Step logs CSS not found: {steps_css_src}")
 
-        # Copy custom metrics CSS
+    def _copy_custom_metrics_css(self, css_dir: Path) -> None:
+        """
+        Copy custom metrics CSS file.
+
+        @param css_dir: CSS output directory
+        """
         metrics_css_src = self.config.template_dir.parent / 'css' / 'custom_metrics_logs.css'
         if metrics_css_src.exists():
             metrics_css_dest = css_dir / 'custom_metrics_logs.css'
@@ -371,7 +400,12 @@ class ReportGenerator:
         else:
             Log.warning(f"Custom metrics CSS not found: {metrics_css_src}")
 
-        # Copy theme CSS
+    def _copy_theme_css(self, css_dir: Path) -> None:
+        """
+        Copy theme CSS file based on configuration.
+
+        @param css_dir: CSS output directory
+        """
         theme_file = f"theme-{self.config.css_template}.css"
         theme_src = self.config.template_dir.parent / 'css' / theme_file
 
@@ -385,4 +419,3 @@ class ReportGenerator:
 
         theme_dest = css_dir / theme_file
         theme_dest.write_text(theme_src.read_text())
-        Log.debug(f"Copied theme CSS: {theme_file}")

@@ -398,36 +398,41 @@ class TestCaseProperties(Enum):
 
 ## 📊 Test Reports 
 
-The framework now includes a powerful test reporting system that generates detailed HTML reports after test execution.
+The framework includes a sophisticated test reporting system that generates detailed HTML reports after test execution.
 
 ### ✨ Features
 
-#### 📝 One Pager Report
-- 📊 Complete test run overview
-- 📈 Interactive metrics dashboard
-- 📋 Test suite summaries
-- 📝 Detailed execution records
-- 📊 Steps and custom metrics visualization
-- 🚀 Support for large test sets
+#### 📝 Report Types
+1. **One Pager Report**
+    - 📊 Complete test run overview in a single page
+    - 📈 Interactive metrics dashboard
+    - 📋 Test suite summaries
+    - 📝 Execution records with filtering
+    
+2. **Drilldown Report**
+    - 🔍 Hierarchical test suite analysis
+    - 📊 Suite-specific detail pages
+    - 📈 Focused performance metrics
+    - 🔗 Inter-linked navigation
 
-#### 🎨 Themes
-Five built-in themes:
+### 🎨 Themes
+Five built-in themes for visual customization:
 - 🌟 Modern (default)
 - ⚡ Minimalist  
 - 🌙 Dark
 - 🎮 Retro
 - 📚 Classic
 
-#### ⚙️ Configuration
+### ⚙️ Configuration
 ```ini
 [REPORT]
-# Report type (one_pager/drilldown)
-type = one_pager
+# Report type
+type = one_pager     # or drilldown
 
 # Sections to include
 sections = main_summary,test_suite_summary,test_case_summary
 
-# Show charts and logs
+# Visual options
 show_charts = true
 show_logs = true
 
@@ -435,17 +440,36 @@ show_logs = true
 css_template = modern
 ```
 
-#### ⚠️ Known Issues
+### 📊 Report Sections
 
-- 🐛 Step completion status sometimes incorrectly marked (fix coming soon)
-- 🎨 Chart colors may have low contrast in dark theme
+#### 1. Test Run Summary
+- 📈 Overall statistics
+- 🌍 Environment info
+- 📊 Performance metrics
+- ⏱️ Timing analysis
 
-#### 🔜 Following Steps
+#### 2. Test Suites
+- 📊 Suite statistics
+- 📈 Pass/fail rates
+- ⏱️ Duration breakdown
+- 🔄 Execution flow
 
-- 📊 Drilldown report implementation
-- 📈 Interactive charts and visualizations
-- 🔍 Enhanced filtering capabilities
-- 📥 Report export functionality
+#### 3. Detailed Results
+- 📝 Test case details
+- 📊 Custom metrics
+- 📋 Step records
+- 🔍 Failure analysis
+
+### ⚠️ Known Issues
+- 🐛 Step completion status might be incorrect in some cases
+- 🎨 Dark theme contrast issues with charts
+
+### 🔜 Roadmap
+- 📊 Enhanced drilldown navigation
+- 📈 More chart types
+- 🔍 Advanced filtering
+- 📥 Report exports
+
 
 ## 📊 Analytics
 
@@ -602,6 +626,84 @@ def analyze_performance_trends(test_case_id: int, metric_name: str = 'processing
         
         return trends
 ```
+
+## 🌐 Frontend Testing
+
+The framework provides automated browser management through the `BrowserManager` class.
+
+### Key Features
+* Single browser instance management via Singleton pattern
+* Automated webdriver downloads
+* Screenshot capabilities
+* Configurable timeouts 
+* Headless mode support
+* Multiple browser support (Chrome, Firefox, Edge)
+
+### Configuration
+```ini
+[FRONTEND]
+# Browser configuration
+browser_type = chrome 
+browser_path = /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+chromedriver_path = /usr/local/bin/chromedriver
+
+# Window configuration
+window_size = maximized  # Options: maximized, custom
+window_width = 1920     # Used if window_size = custom
+window_height = 1080    # Used if window_size = custom
+
+# Browser options
+headless = false
+incognito = true
+disable_infobars = true
+disable_notifications = true
+disable_extensions = true
+disable_gpu = true
+accept_insecure_certs = true
+
+# Timeouts (seconds)
+page_load_timeout = 30
+implicit_wait = 10
+explicit_wait = 20
+```
+
+### Usage
+
+```python
+from core.browser_manager import BrowserManager, BrowserType
+
+# Initialize browser
+browser = BrowserManager.initialize(BrowserType.CHROME)
+driver = browser.get_driver()
+
+# Use in tests
+driver.get("https://example.com")
+driver.find_element(By.ID, "login").click()
+
+# Take screenshot
+browser.get_screenshot("login_page")
+
+# Clear cookies
+browser.clear_cookies()
+```
+
+### MacOS Setup
+
+```commandline
+# Install via Homebrew
+brew install chromedriver
+
+# Set permissions
+chmod +x /usr/local/bin/chromedriver
+```
+
+## Framework Browser Management
+
+- Browser initializes automatically based on configuration
+- Single instance persists across tests by default
+- Closes automatically after test session
+- Takes screenshots on demand or test failures
+- Manages cookies and browser state
 
 ## 💡 Best Practices
 

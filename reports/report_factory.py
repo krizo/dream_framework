@@ -16,12 +16,18 @@ class ReportComponentFactory:
     def create_steps_log_page(steps: List[StepModel], output_path: Path, test_function: str) -> None:
         """
         Create HTML page with test execution logs.
-        Steps are sorted by sequence number and formatted with proper indentation.
 
         @param steps: List of test steps to display
         @param output_path: Output file path
         @param test_function: Name of test function
+        @raises FileNotFoundError: if output directory cannot be created
+        @raises ValueError: if parameters are invalid
         """
+        if steps is None or test_function is None:
+            raise ValueError("Invalid parameters - steps and test_function cannot be None")
+
+        ReportComponentFactory._ensure_parent_dir(output_path)
+
         # Sort steps by sequence number to maintain proper order
         sorted_steps = sorted(steps, key=lambda x: x.sequence_number)
 
@@ -43,10 +49,8 @@ class ReportComponentFactory:
             total_steps=len(sorted_steps)
         )
 
-        # Create steps_logs directory if it doesn't exist
+        # Create parent directory and save output
         output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Save output
         output_path.write_text(content)
 
     @staticmethod
@@ -59,6 +63,7 @@ class ReportComponentFactory:
         @param output_path: Output file path
         @param test_function: Test function name
         """
+
         def pprint_filter(value: Any) -> str:
             import json
             if isinstance(value, (dict, list)):
@@ -97,7 +102,6 @@ class ReportComponentFactory:
         @return: Path to steps log file
         """
         return output_dir / 'steps_logs' / f"{test_function}_steps.html"
-
 
     @staticmethod
     def has_steps_log(output_dir: Path, test_function: str) -> bool:
@@ -186,3 +190,19 @@ class ReportComponentFactory:
                 }
             ]
         }
+
+    @staticmethod
+    def _ensure_parent_dir(output_path: Path) -> None:
+        """
+        Ensure parent directory exists.
+
+        @param output_path: Path to output file
+        @raises FileNotFoundError: if parent directory cannot be created
+        @raises ValueError: if path is invalid
+        """
+        if not output_path.name:
+            raise ValueError("Invalid output path - empty filename")
+
+        parent = output_path.parent
+        if not parent.exists():
+            raise FileNotFoundError(f"Parent directory does not exist: {parent}")

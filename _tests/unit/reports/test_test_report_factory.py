@@ -1,10 +1,12 @@
-"""Tests for report factory module."""
+"""Tests for report component factory functionality."""
 from datetime import datetime
-from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from models.custom_metric_model import CustomMetricModel
 from models.step_model import StepModel
+from models.test_case_execution_record_model import TestExecutionRecordModel
 from reports.report_factory import ReportComponentFactory
 
 
@@ -40,120 +42,200 @@ def sample_steps():
     ]
 
 
-def test_create_log_page(sample_steps, tmp_path):
-    """Test creation of log page."""
-    output_file = tmp_path / "test_log.html"
-    ReportComponentFactory.create_log_page(sample_steps, output_file)
+@pytest.fixture
+def sample_execution():
+    """Provide sample test execution with metrics."""
+    execution = MagicMock(spec=TestExecutionRecordModel)
+    execution.id = 1
+    execution.test_case_id = 1
+    execution.test_run_id = "TEST_RUN_1"
+    execution.test_module = "test_module"
+    execution.test_function = "test_func"
+    execution.name = "Test execution"
+    execution.description = "Test execution description"
+    execution.result = "passed"
+    execution.start_time = datetime.now()
+    execution.end_time = datetime.now()
+    execution.duration = 1.5
+    execution.environment = "test"
 
-    assert output_file.exists()
-    content = output_file.read_text()
+    # Create mock metrics
+    metrics = [
+        CustomMetricModel(
+            test_execution_id=1,
+            name="response_time",
+            value=150.5
+        ),
+        CustomMetricModel(
+            test_execution_id=1,
+            name="memory_usage",
+            value=256.0
+        )
+    ]
+    execution.custom_metrics = metrics
 
-    # Verify basic structure
-    assert "<html>" in content
-    assert "<body>" in content
-    assert "Test Execution Log" in content
+    return execution
 
-    # Verify steps are included
+
+def test_create_steps_log_page(sample_steps, tmp_path):
+    """Test creating steps log page."""
+    output_path = tmp_path / "steps_log.html"
+    ReportComponentFactory.create_steps_log_page(
+        sample_steps,
+        output_path,
+        "test_example"
+    )
+
+    assert output_path.exists()
+    content = output_path.read_text()
+
+    # Verify structure
+    assert "Test Steps Log" in content
     assert "First step" in content
     assert "Nested step" in content
 
-    # Verify proper indentation
-    assert 'margin-left: 20px' in content  # For nested step
-
-    # Verify step completion status
-    assert 'completed' in content
+    # Verify step hierarchy
+    assert 'indent-level: 0' in content
+    assert 'indent-level: 1' in content
 
 
-def test_create_chart_data():
-    """Test creation of chart data."""
+def test_create_metrics_log_page(sample_execution, tmp_path):
+    """Test creating metrics log page."""
+    output_path = tmp_path / "metrics_log.html"
+    ReportComponentFactory.create_metrics_log_page(
+        sample_execution,
+        output_path,
+        "test_func"
+    )
+
+    assert output_path.exists()
+    content = output_path.read_text()
+
+    # Verify structure
+    assert "Test Metrics Log" in content
+    assert "response_time" in content
+    assert "150.5" in content
+    assert "memory_usage" in content
+    assert "256.0" in content
+
+
+def test_chart_data_creation():
+    """Test creating chart data for reports."""
     summary = {
-        'attempted': 10,
+        'total': 10,
+        'attempted': 8,
         'failed': 2,
-        'skipped': 1
+        'skipped': 2
     }
 
     chart_data = ReportComponentFactory.create_chart_data(summary)
 
-    assert 'labels' in chart_data
-    assert 'datasets' in chart_data
-    assert len(chart_data['labels']) == 3
+    assert len(chart_data['labels']) == 3  # Passed, Failed, Skipped
+    assert len(chart_data['datasets']) == 1
     assert len(chart_data['datasets'][0]['data']) == 3
 
-    # Verify values are calculated correctly
     data = chart_data['datasets'][0]['data']
-    assert data[0] == 8  # passed = attempted - failed
+    assert data[0] == 6  # passed = attempted - failed
     assert data[1] == 2  # failed
-    assert data[2] == 1  # skipped
+    assert data[2] == 2  # skipped
 
 
-def test_create_suite_chart_data():
-    """Test creation of suite chart data."""
+def test_suite_chart_data_creation():
+    """Test creating chart data for test suites."""
     suites = {
-        'Suite1': {
-            'attempted': 5,
+        'UI Tests': {
+            'total': 5,
+            'attempted': 4,
             'failed': 1,
             'skipped': 1
         },
-        'Suite2': {
-            'attempted': 3,
-            'failed': 0,
-            'skipped': 2
+        'API Tests': {
+            'total': 8,
+            'attempted': 7,
+            'failed': 2,
+            'skipped': 1
         }
     }
 
     chart_data = ReportComponentFactory.create_suite_chart_data(suites)
 
-    assert 'labels' in chart_data
+    # Verify structure
     assert len(chart_data['labels']) == 2
-    assert 'Suite1' in chart_data['labels']
-    assert 'Suite2' in chart_data['labels']
+    assert chart_data['labels'] == ['UI Tests', 'API Tests']
 
-    # Verify datasets structure
-    assert len(chart_data['datasets']) == 3  # passed, failed, skipped
+    assert len(chart_data['datasets']) == 3  # Passed, Failed, Skipped
     assert chart_data['datasets'][0]['label'] == 'Passed'
     assert chart_data['datasets'][1]['label'] == 'Failed'
     assert chart_data['datasets'][2]['label'] == 'Skipped'
 
-    # Verify data calculation
-    passed_data = chart_data['datasets'][0]['data']
-    assert passed_data[0] == 4  # Suite1: attempted - failed = 5 - 1
-    assert passed_data[1] == 3  # Suite2: attempted - failed = 3 - 0
+    # Verify data
+    assert chart_data['datasets'][0]['data'] == [3, 5]  # Passed = attempted - failed
+    assert chart_data['datasets'][1]['data'] == [1, 2]  # Failed
+    assert chart_data['datasets'][2]['data'] == [1, 1]  # Skipped
 
 
-def test_invalid_steps_handling():
-    """Test handling of invalid steps data."""
-    # Test with empty steps list
-    output_file = Path("test_log.html")
-    ReportComponentFactory.create_log_page([], output_file)
+def test_log_path_generation(tmp_path):
+    """Test generating log file paths."""
+    base_dir = tmp_path / "reports"
+    test_func = "test_example"
 
-    # Test with None
-    with pytest.raises(TypeError):
-        ReportComponentFactory.create_log_page(None, output_file)
+    # Test steps log path
+    steps_path = ReportComponentFactory.get_steps_log_path(base_dir, test_func)
+    assert steps_path == base_dir / "steps_logs" / f"{test_func}_steps.html"
 
-
-def test_chart_data_validation():
-    """Test validation of chart data creation."""
-    # Test with invalid summary
-    with pytest.raises(KeyError):
-        ReportComponentFactory.create_chart_data({})
-
-    # Test with empty suites
-    chart_data = ReportComponentFactory.create_suite_chart_data({})
-    assert len(chart_data['labels']) == 0
-    assert all(len(dataset['data']) == 0 for dataset in chart_data['datasets'])
+    # Test metrics log path
+    metrics_path = ReportComponentFactory.get_metrics_log_path(base_dir, test_func)
+    assert metrics_path == base_dir / "metrics_logs" / f"{test_func}_metrics.html"
 
 
-def test_step_hierarchical_display(sample_steps, tmp_path):
-    """Test proper display of step hierarchy."""
-    output_file = tmp_path / "hierarchy_test.html"
-    ReportComponentFactory.create_log_page(sample_steps, output_file)
+def test_has_log_checks(tmp_path):
+    """Test checking log file existence."""
+    base_dir = tmp_path / "reports"
+    test_func = "test_example"
 
-    content = output_file.read_text()
+    # Create test log files
+    steps_dir = base_dir / "steps_logs"
+    metrics_dir = base_dir / "metrics_logs"
+    steps_dir.mkdir(parents=True)
+    metrics_dir.mkdir(parents=True)
 
-    # Verify hierarchical numbers are displayed
-    assert "1" in content
-    assert "1.1" in content
+    steps_file = steps_dir / f"{test_func}_steps.html"
+    metrics_file = metrics_dir / f"{test_func}_metrics.html"
 
-    # Verify proper indentation levels
-    assert 'margin-left: 0px' in content  # Root step
-    assert 'margin-left: 20px' in content  # Nested step
+    steps_file.touch()
+    metrics_file.touch()
+
+    # Verify checks
+    assert ReportComponentFactory.has_steps_log(base_dir, test_func)
+    assert ReportComponentFactory.has_metrics_log(base_dir, test_func)
+    assert not ReportComponentFactory.has_steps_log(base_dir, "nonexistent")
+    assert not ReportComponentFactory.has_metrics_log(base_dir, "nonexistent")
+
+
+@pytest.fixture
+def empty_steps():
+    """Provide empty steps list."""
+    return []
+
+
+def test_error_handling(empty_steps, tmp_path):
+    """Test error handling in component factory."""
+    # Test with empty steps
+    output_path = tmp_path / "empty_steps.html"
+    ReportComponentFactory.create_steps_log_page(empty_steps, output_path, "test_func")
+    assert output_path.exists()
+
+    # Test with non-existent parent directory
+    invalid_path = tmp_path / "nonexistent" / "test.html"
+    with pytest.raises(FileNotFoundError, match="Parent directory does not exist"):
+        ReportComponentFactory.create_steps_log_page([], invalid_path, "test_func")
+    assert not invalid_path.exists()
+
+    # Test with None values
+    with pytest.raises(ValueError, match="steps and test_function cannot be None"):
+        ReportComponentFactory.create_steps_log_page(None, output_path, None)
+
+    # Test with empty filename
+    invalid_file = tmp_path / ""
+    with pytest.raises(IsADirectoryError):
+        ReportComponentFactory.create_steps_log_page([], invalid_file, "test_func")

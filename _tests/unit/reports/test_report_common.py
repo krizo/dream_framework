@@ -1,4 +1,4 @@
-"""Integration test for report generation functionality."""
+"""Common test utilities for report tests."""
 import random
 import shutil
 from datetime import datetime, timedelta
@@ -14,15 +14,13 @@ from models.step_model import StepModel
 from models.test_case_execution_record_model import TestExecutionRecordModel
 from models.test_case_model import TestCaseModel
 from models.test_run_model import TestRunModel
-from reports.report_config import ReportConfig, ReportType, ReportSection, ReportTableConfig
-from reports.report_generator import ReportGenerator
 
 
 def generate_test_data(db: AutomationDatabase) -> str:
     """
     Generate sample test data for report testing.
 
-    @param db: Database instance
+    @param db: Database instance to populate
     @return: Generated test run ID
     """
     # Initialize TestRun
@@ -59,7 +57,6 @@ def generate_test_data(db: AutomationDatabase) -> str:
                 session.add(test_case)
                 session.flush()
 
-                # Create execution record
                 execution = TestExecutionRecordModel(
                     test_case_id=test_case.id,
                     test_run_id=test_run_id,
@@ -109,139 +106,95 @@ def generate_test_data(db: AutomationDatabase) -> str:
                     )
                     steps.append(step)
                 session.add_all(steps)
-
         return test_run_id
 
 
-def setup_report_dir(base_dir: Path) -> Path:
-    """
-    Setup report directory structure.
 
-    @param base_dir: Base output directory
-    @return: Report directory path
-    """
-    # Use logs directory for reports
-    report_dir = base_dir / "reports"
-    report_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create CSS directory in logs
+
+def setup_css_files(report_dir: Path, theme: str = "classic") -> None:
+    """
+    Set up CSS files for report directory.
+
+    @param report_dir: Report output directory
+    @param theme: Theme name to use
+    """
     css_dir = report_dir / "css"
-    css_dir.mkdir(exist_ok=True)
+    css_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy required CSS files from templates
+    # Required CSS files
     css_files = [
         "base-layout.css",
-        "theme-modern.css",
-        "theme-dark.css",
-        "theme-classic.css",
-        "theme-minimalist.css",
-        "theme-retro.css",
+        f"theme-{theme}.css",
         "step_logs.css",
         "custom_metrics_logs.css"
     ]
 
-    css_source = TEMPLATES_DIR.parent / "css"
-    if css_source.exists():
-        for css_file in css_files:
-            src = css_source / css_file
-            if src.exists():
-                shutil.copy2(src, css_dir / css_file)
-            else:
-                Log.warning(f"CSS file not found: {src}")
+    template_css_dir = TEMPLATES_DIR.parent / "css"
+    copied_files = []
 
-    return report_dir
+    # Copy CSS files
+    for css_file in css_files:
+        src = template_css_dir / css_file
+        dst = css_dir / css_file
+        if src.exists():
+            shutil.copy2(src, dst)
+            copied_files.append(css_file)
+            Log.info(f"Copied CSS file: {css_file}")
+        else:
+            Log.warning(f"CSS file not found: {src}")
+
+    # Verify required files
+    required_files = ["base-layout.css", f"theme-{theme}.css"]
+    missing_files = [f for f in required_files if f not in copied_files]
+    if missing_files:
+        raise ValueError(f"Missing required CSS files: {missing_files}")
+
+    Log.info(f"CSS setup completed in {css_dir}")
 
 
-def test_generate_reports():
-    """Test generating both one-pager and drilldown reports."""
-    Log.info("Starting test report generation")
-    TestRun.reset()
+def verify_report_contents(report_path: Path) -> None:
+    """
+    Verify common report contents.
 
-    # Initialize database
-    db = AutomationDatabase('sqlite:///:memory:')
-    db.create_tables()
+    @param report_path: Path to report file
+    """
+    content = report_path.read_text()
 
-    # Generate test data
-    test_run_id = generate_test_data(db)
-    Log.info(f"Generated test data with test_run_id: {test_run_id}")
+    # Verify CSS links - using more flexible search
+    assert 'href="css/base-layout.css"' in content, "Missing base CSS link"
+    assert 'href="css/theme-' in content, "Missing theme CSS link"
 
-    # Verify test data
-    with db.session_scope() as session:
-        test_run = session.query(TestRunModel).filter_by(test_run_id=test_run_id).first()
-        if not test_run:
-            raise ValueError(f"Test run {test_run_id} not found after generation!")
+    # Verify basic structure
+    assert "Test Execution Report" in content, "Missing report title"
+    assert "metric-container" in content, "Missing metrics container"
+    assert '<table' in content, "Missing data table"
 
-        executions = session.query(TestExecutionRecordModel) \
-            .filter_by(test_run_id=test_run_id) \
-            .all()
-        Log.info(f"Verified test data - found {len(executions)} executions")
+    # Verify report elements
+    required_elements = [
+        "Start Time",
+        "End Time",
+        "Duration",
+        "Owner",
+        "Environment"
+    ]
+    for element in required_elements:
+        assert element in content, f"Missing required element: {element}"
 
-    # Setup report directory
-    report_dir = setup_report_dir(Path("logs"))
+    # Verify metrics files
+    metrics_dir = report_path.parent / "metrics_logs"
+    assert metrics_dir.exists(), "Missing metrics directory"
 
-    # Generate one-pager report
-    onepager_config = ReportConfig(
-        report_type=ReportType.ONE_PAGER,
-        sections=[
-            ReportSection.MAIN_SUMMARY,
-            ReportSection.TEST_RESULTS,
-            ReportSection.TEST_CASE_SUMMARY
-        ],
-        table_config=ReportTableConfig(
-            columns=["test_name", "result", "duration", "steps", "custom_metrics"],
-            custom_columns=[],
-            failed_threshold=80.0
-        ),
-        show_logs=True,
-        show_charts=True,
-        css_template="modern",
-        output_dir=report_dir / "one_pager"
-    )
+    metrics_files = list(metrics_dir.glob("*_metrics.html"))
+    assert metrics_files, "No metrics files found"
 
-    onepager_generator = ReportGenerator(onepager_config, db)
-    onepager_path = onepager_generator.generate_report(test_run_id, report_dir / "one_pager")
-
-    # Generate drilldown report
-    drilldown_config = ReportConfig(
-        report_type=ReportType.DRILLDOWN,
-        sections=[
-            ReportSection.MAIN_SUMMARY,
-            ReportSection.TEST_RESULTS,
-            ReportSection.TEST_CASE_SUMMARY,
-            ReportSection.SUITE_DETAILS
-        ],
-        table_config=ReportTableConfig(
-            columns=["test_name", "result", "duration", "steps", "custom_metrics"],
-            custom_columns=[],
-            failed_threshold=80.0
-        ),
-        show_logs=True,
-        show_charts=True,
-        css_template="modern",
-        output_dir=report_dir / "drilldown"
-    )
-
-    drilldown_generator = ReportGenerator(drilldown_config, db)
-    drilldown_path = drilldown_generator.generate_report(test_run_id, report_dir / "drilldown")
-
-    # Verify reports
-    assert onepager_path and onepager_path.exists()
-    assert drilldown_path and drilldown_path.exists()
-
-    # Verify CSS files
-    css_dir = report_dir / "css"
-    assert css_dir.exists()
-    assert (css_dir / "base-layout.css").exists()
-    assert (css_dir / "theme-modern.css").exists()
-
-    # Verify drilldown structure
-    suite_pages = list(drilldown_path.parent.glob("suite_*.html"))
-    assert len(suite_pages) > 0, "No suite pages generated"
-
-    Log.info(f"Generated reports in {report_dir}")
-    Log.info(f"One-pager: {onepager_path}")
-    Log.info(f"Drilldown: {drilldown_path}")
-
-    TestRun.reset()
-
-    return onepager_path, drilldown_path
+    # Verify metrics content
+    metrics_content = metrics_files[0].read_text()
+    performance_metrics = [
+        "response_time_ms",
+        "cpu_usage_percent",
+        "processed_records",
+        "memory_usage_mb"
+    ]
+    has_performance_metrics = any(metric in metrics_content for metric in performance_metrics)
+    assert has_performance_metrics, f"Missing performance metrics in {metrics_files[0]}"

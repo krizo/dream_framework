@@ -118,7 +118,7 @@ class ReportingPlugin:
                 total_duration = (datetime.now() - self.start_time).total_seconds()
 
                 Log.separator("=")
-                Log.info("Report Generation Summary")
+                Log.info("Test Run Summary")
                 Log.separator("-")
                 Log.info(f"Test Run: {self.test_run.test_run_id}")
                 Log.info(f"Environment: {self.test_run.environment}")

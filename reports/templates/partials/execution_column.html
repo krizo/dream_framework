@@ -1,0 +1,51 @@
+{% if col == 'test_name' %}
+    {{execution.test_case.name if execution.test_case else execution.name}}
+{% elif col == 'test_function' %}
+    {{execution.test_function}}
+{% elif col == 'description' %}
+    {{execution.test_case.description if execution.test_case else execution.description}}
+{% elif col == 'result' %}
+    <div class="status-{{execution.result|lower}}">
+        {% if execution.result == 'PASSED' %}
+            {{ icon('check-circle') }}
+        {% elif execution.result == 'FAILED' %}
+            {{ icon('x-circle') }}
+        {% else %}
+            {{ icon('alert-circle') }}
+        {% endif %}
+        {{execution.result}}
+    </div>
+{% elif col == 'duration' %}
+    {{execution.duration|format_duration if execution.duration is not none else 'N/A'}}
+{% elif col == 'failure' %}
+    {% if execution.failure %}
+        <div class="failure-message">
+            {{ icon('alert-triangle') }}
+            {{execution.failure}}
+        </div>
+    {% endif %}
+{% elif col == 'failure_type' %}
+    {% if execution.failure_type %}
+        {{execution.failure_type}}
+    {% endif %}
+{% elif col == 'test_start' %}
+    {{execution.start_time|format_timestamp}}
+{% elif col == 'test_end' %}
+    {{execution.end_time|format_timestamp}}
+{% elif col == 'steps' %}
+    {% if execution.steps %}
+        <a href="steps_logs/{{execution.test_function}}_steps.html" target="_blank">
+            {{ icon('list') }} View Steps ({{ execution.steps|length }})
+        </a>
+    {% else %}
+        -
+    {% endif %}
+{% elif col == 'custom_metrics' %}
+    {% if execution.custom_metrics %}
+        <a href="metrics_logs/{{execution.test_function}}_metrics.html" target="_blank">
+            {{ icon('list') }} View Metrics ({{ execution.custom_metrics|length }})
+        </a>
+    {% else %}
+        -
+    {% endif %}
+{% endif %}

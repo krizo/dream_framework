@@ -63,10 +63,19 @@ class ConfigParser(Generic[T]):
 
             value_str = config.get(cls.SECTION_NAME, key)
 
+            # Special handling for boolean values
+            if isinstance(fallback, bool):
+                return value_str.lower() == 'true'
+
             try:
                 return ast.literal_eval(value_str)
             except (ValueError, SyntaxError):
                 return value_str
+
+        except Exception as e:
+            Log.error(f"Error getting config value {cls.SECTION_NAME}.{key}: {str(e)}")
+            return fallback
+
         except Exception as e:
             Log.error(f"Error getting config value {cls.SECTION_NAME}.{key}: {str(e)}")
             return fallback
