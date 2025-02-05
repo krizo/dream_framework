@@ -57,3 +57,11 @@ class FrontendConfig(ConfigParser):
             'on_failure': cls.get_value('take_screenshot_on_failure', True),
             'dir': cls.get_value('screenshots_dir', 'screenshots')
         }
+
+    @classmethod
+    def get_recording_config(cls) -> Dict[str, Any]:
+        """Get recording configuration."""
+        return {
+            'enabled': cls.get_value('record_session', False),
+            'dir': cls.get_value('recordings_dir', 'recordings')
+        }

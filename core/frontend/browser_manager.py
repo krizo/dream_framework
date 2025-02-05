@@ -1,16 +1,16 @@
 """Module for managing browser instances."""
+import json
+from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any
+from pathlib import Path
+from typing import Optional
 import time
 
-from selenium import webdriver
+import ffmpeg
+from seleniumwire import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.firefox.service import Service as FirefoxService
-from selenium.webdriver.edge.service import Service as EdgeService
 from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.firefox import GeckoDriverManager
-from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 from core.frontend.frontend_config import FrontendConfig
 from core.logger import Log
@@ -53,6 +53,10 @@ class BrowserManager:
             return cls._instance
 
         cls._create_driver(browser_type)
+
+        if FrontendConfig.get_recording_config()['enabled']:
+            cls.start_recording()
+
         return cls._instance
 
     @classmethod
@@ -151,6 +155,10 @@ class BrowserManager:
     @classmethod
     def close(cls) -> None:
         """Close browser and cleanup resources."""
+        if cls._driver:
+            recording_config = FrontendConfig.get_recording_config()
+            if recording_config['enabled'] and hasattr(cls, '_start_time'):
+                cls.save_recording(f"recording_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         cls._quit_driver()
         cls._instance = None
 
@@ -182,3 +190,53 @@ class BrowserManager:
             screenshot_path = screenshot_dir / f"{name}.png"
             cls._driver.save_screenshot(str(screenshot_path))
             Log.info(f"Screenshot saved: {screenshot_path}")
+
+    @classmethod
+    def start_recording(cls) -> None:
+        """Start recording browser session."""
+        if cls._driver:
+            cls._driver.requests.clear()
+            cls._start_time = datetime.now()
+            Log.info("Started recording browser session")
+
+    @classmethod
+    def save_recording(cls, name: str) -> None:
+        """
+        Save recorded session to HAR file.
+
+        @param name: Recording name
+        """
+        if not cls._driver or not hasattr(cls, '_start_time'):
+            return
+
+        recording_dir = Path(FrontendConfig.get_recording_config()['dir'])
+        recording_dir.mkdir(parents=True, exist_ok=True)
+
+        har_path = recording_dir / f"{name}.har"
+
+        requests = [{
+            'startedDateTime': r.date.isoformat(),
+            'request': {
+                'method': r.method,
+                'url': r.url,
+                'headers': dict(r.headers),
+            },
+            'response': {
+                'status': r.response.status_code if r.response else None,
+                'headers': dict(r.response.headers) if r.response else {},
+            }
+        } for r in cls._driver.requests]
+
+        har_data = {
+            'log': {
+                'version': '1.2',
+                'creator': {'name': 'Test Framework', 'version': '1.0'},
+                'pages': [],
+                'entries': requests
+            }
+        }
+
+        with open(har_path, 'w') as f:
+            json.dump(har_data, f, indent=2)
+
+        Log.info(f"Saved session recording: {har_path}")
