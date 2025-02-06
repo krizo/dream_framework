@@ -45,7 +45,11 @@ class BrowserManager:
 
         @param browser_type: Type of browser to initialize
         @return: BrowserManager instance
+        @raises ValueError: If invalid browser type is provided
         """
+        if not isinstance(browser_type, BrowserType):
+            raise ValueError(f"Invalid browser type. Expected BrowserType enum, got {type(browser_type)}")
+
         if cls._instance is None:
             cls._instance = cls()
 
@@ -105,7 +109,7 @@ class BrowserManager:
         if cls._driver is not None:
             cls._quit_driver()
 
-        Log.info(f"Initializing {browser_type.value} browser")
+        Log.info(f"Initializing {browser_type} browser")
 
         try:
             if browser_type == BrowserType.CHROME:
