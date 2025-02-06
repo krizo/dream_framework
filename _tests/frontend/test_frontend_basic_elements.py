@@ -16,40 +16,6 @@ from core.frontend.elements.basic.select import Select
 from core.frontend.elements.basic.textarea import TextArea
 
 
-@pytest.fixture(scope="session")
-def server_url() -> Generator[str, Any, None]:
-    """Start local server with test page."""
-    page_name = "example_html_page.html"
-    test_page = Path(__file__).parent / page_name
-
-    os.chdir(test_page.parent)
-
-    server = HTTPServer(('localhost', 0), SimpleHTTPRequestHandler)
-    server_thread = Thread(target=server.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
-
-    yield f"http://localhost:{server.server_port}/{page_name}"
-
-    server.shutdown()
-    server.server_close()
-
-
-@pytest.fixture(autouse=True)
-def browser():
-    """Initialize and clean up browser."""
-    browser = BrowserManager.initialize()
-    yield browser
-    BrowserManager.close()
-
-
-@pytest.fixture
-def page(server_url, browser):
-    """Load test page."""
-    browser.get_driver().get(server_url)
-    return browser.get_driver()
-
-
 def test_text_field(page):
     """Test TextField element."""
     username = TextField(

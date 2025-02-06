@@ -1,11 +1,16 @@
 import os
 import tempfile
-from typing import Generator
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from threading import Thread
+from typing import Generator, Any
 from unittest.mock import patch
 
 import pytest
 
 from core.automation_database import AutomationDatabase
+from core.common_paths import ROOT_DIR
+from core.frontend.browser_manager import BrowserManager
 from core.test_case import TestCase
 from core.test_run import TestRun
 from models.base_model import Base
@@ -137,3 +142,37 @@ def test_db():
     db = AutomationDatabase('sqlite:///:memory:')
     db.create_tables()
     yield db
+
+
+@pytest.fixture(scope="session")
+def server_url() -> Generator[str, Any, None]:
+    """Start local server with test page."""
+    page_name = "example_html_page.html"
+    test_page = ROOT_DIR / '_tests' / 'frontend' / page_name
+
+    os.chdir(test_page.parent)
+
+    server = HTTPServer(('localhost', 0), SimpleHTTPRequestHandler)
+    server_thread = Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+
+    yield f"http://localhost:{server.server_port}/{page_name}"
+
+    server.shutdown()
+    server.server_close()
+
+
+@pytest.fixture(autouse=True)
+def browser():
+    """Initialize and clean up browser."""
+    browser = BrowserManager.initialize()
+    yield browser
+    BrowserManager.close()
+
+
+@pytest.fixture
+def page(server_url, browser):
+    """Load test page."""
+    browser.get_driver().get(server_url)
+    return browser.get_driver()
