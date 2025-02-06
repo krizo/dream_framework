@@ -166,9 +166,7 @@ def server_url() -> Generator[str, Any, None]:
 @pytest.fixture(autouse=True)
 def browser():
     """Initialize and clean up browser."""
-    browser = BrowserManager.initialize()
-    yield browser
-    BrowserManager.close()
+    yield BrowserManager.initialize()
 
 
 @pytest.fixture
