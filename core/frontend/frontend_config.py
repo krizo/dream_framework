@@ -1,6 +1,7 @@
 """Frontend configuration parser module."""
 from typing import Dict, Any
 
+from core.common_paths import LOG_DIR
 from core.configuration.config_parser import ConfigParser
 
 
@@ -63,5 +64,5 @@ class FrontendConfig(ConfigParser):
         """Get recording configuration."""
         return {
             'enabled': cls.get_value('record_session', False),
-            'dir': cls.get_value('recordings_dir', 'recordings')
+            'dir': LOG_DIR / 'recording'
         }

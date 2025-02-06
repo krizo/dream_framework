@@ -9,6 +9,7 @@ from unittest.mock import patch, MagicMock
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 
+from core.common_paths import LOG_DIR
 from core.frontend.browser_manager import BrowserManager, BrowserType
 from core.frontend.frontend_config import FrontendConfig
 
@@ -126,7 +127,7 @@ def test_screenshot_capture():
 def test_session_recording():
     """Test session recording functionality."""
     with patch.object(FrontendConfig, 'get_recording_config') as mock_config:
-        recording_dir = Path("recordings")
+        recording_dir = LOG_DIR  / "recordings"
         if recording_dir.exists():
             # Cleanup before test
             for file in recording_dir.glob("*.har"):
