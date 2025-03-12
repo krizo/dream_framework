@@ -167,6 +167,13 @@ class BaseElement(ABC):
         """
         return cls(**kwargs)
 
+    def scroll_into_view(self):
+        """Scroll element into viewport."""
+        element = self.find()
+        self._driver.execute_script("arguments[0].scrollIntoView(true);", element)
+        # Add small margin at the top to ensure element is fully visible
+        self._driver.execute_script("window.scrollBy(0, -100);")
+
     def _find_element(self, timeout: int) -> WebElement:
         """
         Internal find element implementation.
