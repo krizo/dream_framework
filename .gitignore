@@ -8,3 +8,4 @@ database_config.yaml
 environments.yaml
 environments.yml
 install_db.py
+credentials.yml

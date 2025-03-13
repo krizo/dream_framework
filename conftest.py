@@ -5,6 +5,7 @@ from core.common_paths import CONFIG_DIR, LOG_DIR
 from core.logger import Log
 from core.plugins.test_report_plugin import ReportingPlugin
 from core.plugins.test_session_plugin import TestSessionPlugin
+from medmutual.config.mm_fixtures import *
 
 LOGGER_CONFIG_PATH = CONFIG_DIR / 'logger.ini'
 
