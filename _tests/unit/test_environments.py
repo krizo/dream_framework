@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from core.environments import TestEnvironment
+from core.environments import BaseTestEnvironment
 
 pytestmark = pytest.mark.no_database_plugin
 
@@ -34,7 +34,7 @@ class AppConfig:
     @classmethod
     def from_environment(cls, env_name: str = "development") -> 'AppConfig':
         """Create configuration from environment settings."""
-        env = TestEnvironment(env_name)
+        env = BaseTestEnvironment(env_name)
         return cls(
             hostname=env.get_property("hostname"),
             api_prefix=env.get_property("api_prefix"),
@@ -51,7 +51,7 @@ class AppConfig:
 
 def test_environment_initialization():
     """Test environment initialization with explicit name."""
-    env = TestEnvironment("development")
+    env = BaseTestEnvironment("development")
     assert env.environment_name == "development"
     assert str(env) == "development"
 
@@ -59,14 +59,14 @@ def test_environment_initialization():
 def test_environment_from_env_var():
     """Test environment initialization from environment variable."""
     os.environ["TEST_ENVIRONMENT"] = "staging"
-    env = TestEnvironment()
+    env = BaseTestEnvironment()
     assert env.environment_name == "staging"
     assert str(env) == "staging"
 
 
 def test_environment_properties():
     """Test property access from environment."""
-    env = TestEnvironment("production")
+    env = BaseTestEnvironment("production")
 
     # Test simple properties
     assert env.get_property("hostname") == "foo.example.com"
@@ -83,7 +83,7 @@ def test_environment_not_initialized():
     if "TEST_ENVIRONMENT" in os.environ:
         del os.environ["TEST_ENVIRONMENT"]
 
-    env = TestEnvironment()
+    env = BaseTestEnvironment()
     assert env.environment_name is None
     assert str(env) == "None"
 
@@ -94,12 +94,12 @@ def test_environment_not_initialized():
 def test_invalid_environment():
     """Test behavior with invalid environment name."""
     with pytest.raises(ValueError, match="Environment 'invalid' not found"):
-        TestEnvironment("invalid")
+        BaseTestEnvironment("invalid")
 
 
 def test_missing_property():
     """Test behavior when accessing missing property."""
-    env = TestEnvironment("development")
+    env = BaseTestEnvironment("development")
     with pytest.raises(KeyError, match="Property 'nonexistent' not found"):
         env.get_property("nonexistent")
 
@@ -121,9 +121,9 @@ def test_app_config_creation():
 
 def test_different_environments():
     """Test different environments have different configurations."""
-    dev_env = TestEnvironment("development")
-    prod_env = TestEnvironment("production")
-    staging_env = TestEnvironment("staging")
+    dev_env = BaseTestEnvironment("development")
+    prod_env = BaseTestEnvironment("production")
+    staging_env = BaseTestEnvironment("staging")
 
     # Compare hostnames
     assert dev_env.get_property("hostname") == "localhost"

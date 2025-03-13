@@ -5,18 +5,18 @@ from typing import Optional, Any, Dict
 import yaml
 
 
-class TestEnvironment:
+class BaseTestEnvironment:
     """
     Class representing test environment configuration.
     Provides access to environment-specific properties defined in YAML configuration.
 
     Configuration file location:
-    The configuration file must be located at 'config/environments.yml' relative to the
+    The configuration file must be located at 'config/environments.yaml' relative to the
     framework's root directory. Example structure:
 
     my_project/
     ├── config/
-    │   └── environments.yml
+    │   └── environments.yaml
     ├── core/
     │   └── environments.py
     └── tests/
@@ -92,9 +92,9 @@ class TestEnvironment:
     def _load_configuration(self) -> None:
         """
         Load environment configuration from YAML file.
-        Configuration file is expected at config/environments.yml
+        Configuration file is expected at config/environments.yaml
         """
-        config_path = Path(__file__).parent.parent / 'config' / 'environments.yml'
+        config_path = Path(__file__).parent.parent / 'config' / 'environments.yaml'
 
         if not config_path.exists():
             raise FileNotFoundError(f"Environment configuration not found at: {config_path}")

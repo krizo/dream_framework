@@ -4,3 +4,7 @@
 .DS_Store
 logs/
 *.log
+database_config.yaml
+environments.yaml
+environments.yml
+install_db.py
