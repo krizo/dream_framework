@@ -339,3 +339,44 @@ td[data-column="metrics"] {
         height: 250px;
     }
 }
+
+/* Flex row container for side-by-side sections */
+.flex-row-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.flex-item {
+    flex: 1 1 400px;
+    min-width: 400px;
+}
+
+/* Adjusted chart styles for flex layout */
+.flex-item.charts-section .chart-card {
+    margin-bottom: 1.5rem;
+}
+
+.flex-item.charts-section .chart-wrapper {
+    height: 250px;
+}
+
+/* Make tables more compact in flex layout */
+.flex-item table th,
+.flex-item table td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .flex-row-container {
+        flex-direction: column;
+    }
+
+    .flex-item {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+}

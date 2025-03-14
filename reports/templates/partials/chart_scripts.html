@@ -1,13 +1,13 @@
 {% if config.show_charts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("Chart initialization script running");
+        // Detect if we're in a flex layout
+        const isFlexLayout = document.querySelector('.flex-row-container') !== null;
+        console.log("Chart initialization - Flex layout:", isFlexLayout);
 
         // Create summary pie chart
         const summaryCtx = document.getElementById('summary-chart');
         if (summaryCtx) {
-            console.log("Found summary chart canvas");
-
             const summaryData = {
                 labels: ['Passed', 'Failed', 'Skipped'],
                 datasets: [{
@@ -30,7 +30,7 @@
                 }]
             };
 
-            const summaryChart = new Chart(summaryCtx, {
+            new Chart(summaryCtx, {
                 type: 'pie',
                 data: summaryData,
                 options: {
@@ -38,31 +38,24 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'right',
+                            position: isFlexLayout ? 'bottom' : 'right',
                         },
                         title: {
-                            display: true,
+                            display: isFlexLayout ? false : true,
                             text: 'Test Results Summary'
                         }
                     }
                 }
             });
-            console.log("Summary chart created");
-        } else {
-            console.log("Could not find summary-chart canvas element");
         }
 
         // Create suites bar chart
         const suitesCtx = document.getElementById('suites-chart');
         if (suitesCtx && {{ suites|length }} > 1) {
-            console.log("Found suites chart canvas");
-
             const suiteLabels = [{% for suite_name in suites.keys() %}'{{ suite_name }}',{% endfor %}];
             const passedData = [{% for suite in suites.values() %}{{ suite.attempted - suite.failed }},{% endfor %}];
             const failedData = [{% for suite in suites.values() %}{{ suite.failed }},{% endfor %}];
             const skippedData = [{% for suite in suites.values() %}{{ suite.skipped }},{% endfor %}];
-
-            console.log("Suite data prepared:", {suiteLabels, passedData, failedData, skippedData});
 
             const suitesData = {
                 labels: suiteLabels,
@@ -85,7 +78,7 @@
                 ]
             };
 
-            const suitesChart = new Chart(suitesCtx, {
+            new Chart(suitesCtx, {
                 type: 'bar',
                 data: suitesData,
                 options: {
@@ -94,6 +87,9 @@
                     scales: {
                         x: {
                             stacked: true,
+                            ticks: {
+                                display: !isFlexLayout // Hide labels in flex layout to save space
+                            }
                         },
                         y: {
                             stacked: true
@@ -102,19 +98,15 @@
                     plugins: {
                         legend: {
                             position: 'top',
+                            display: true
                         },
                         title: {
-                            display: true,
+                            display: false,
                             text: 'Test Results by Suite'
                         }
                     }
                 }
             });
-            console.log("Suites chart created");
-        } else if ({{ suites|length }} <= 1) {
-            console.log("Not enough suites to display chart");
-        } else {
-            console.log("Could not find suites-chart canvas element");
         }
     });
 </script>
