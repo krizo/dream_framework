@@ -13,3 +13,6 @@ requests~=2.32.3           # For sending API requests
 responses==0.24.1          # Mock HTTP responses
 SQLAlchemy==2.0.36         # SQL toolkit and ORM
 sqlalchemy-pyodbc-mssql==0.1.1  # MSSQL dialect for SQLAlchemy
+playwright~=1.50.0
+Faker~=37.0.0
+selenium~=4.29.0
