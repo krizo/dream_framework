@@ -121,33 +121,6 @@ class PlaywrightManager:
 
         return None
 
-    def _parse_window_size(self) -> Dict[str, int]:
-        """
-        Parse window size from config.
-
-        @return: Dictionary with width and height values
-        """
-        window_size = self.config.get_value('window_size', 'maximized')
-
-        # Handle numeric dimensions (width,height format)
-        if isinstance(window_size, str) and ',' in window_size:
-            try:
-                width, height = window_size.split(',')
-                return {
-                    'width': int(width.strip()),
-                    'height': int(height.strip())
-                }
-            except (ValueError, TypeError):
-                Log.warning(f"Invalid window_size format: {window_size}, using default")
-
-        # Handle 'maximized' keyword - use large default size
-        if window_size == 'maximized':
-            return {'width': 1920, 'height': 1080}
-
-        # Handle custom dimensions from separate config values
-        width = self.config.get_value('viewport_width', 1280)
-        height = self.config.get_value('viewport_height', 720)
-        return {'width': width, 'height': height}
 
     def _start_playwright(self) -> None:
         """
@@ -159,19 +132,22 @@ class PlaywrightManager:
             # Launch browser based on type
             browser_launcher = getattr(self._playwright, self._browser_type.value)
 
-            # Get window dimensions
-            viewport = self._parse_window_size()
 
             # Launch browser with default args
-            self._browser = browser_launcher.launch(**self._browser_args)
+            window_size =  self.config.get_window_size() or 'maximized'
+            if window_size == 'maximized':
+                extra_args = ["--start-maximized"]
+            else:
+                extra_args = [f"--window-size={self.config.get_window_size()[0]},{self.config.get_window_size()[1]}"]
+            self._browser = browser_launcher.launch(**self._browser_args, args=extra_args)
 
             # Create context with viewport and recording options
             context_options = {
-                'viewport': viewport,
                 'record_video_dir': str(self._videos_dir) if self.config.record_video() else None,
+                'accept_downloads': 'true'
             }
 
-            self._context = self._browser.new_context(**context_options)
+            self._context = self._browser.new_context(**context_options, no_viewport=True)
 
             # Start tracing if configured
             if self.config.record_trace():
