@@ -13,6 +13,8 @@ class ReportComponentFactory:
     """Factory for creating report components."""
 
     @staticmethod
+
+
     def create_steps_log_page(steps: List[StepModel], output_path: Path, test_function: str) -> None:
         """
         Create HTML page with test execution logs.
@@ -28,8 +30,12 @@ class ReportComponentFactory:
 
         ReportComponentFactory._ensure_parent_dir(output_path)
 
-        # Sort steps by sequence number to maintain proper order
-        sorted_steps = sorted(steps, key=lambda x: x.sequence_number)
+        # Sort steps by hierarchical number instead of sequence number
+        # First, convert hierarchical numbers to tuples of integers for proper sorting
+        def hierarchical_sort_key(step):
+            return tuple(int(n) for n in step.hierarchical_number.split('.'))
+
+        sorted_steps = sorted(steps, key=hierarchical_sort_key)
 
         # Get execution time from first step
         execution_time = sorted_steps[0].start_time.strftime("%Y-%m-%d %H:%M:%S") if sorted_steps else "Unknown"
