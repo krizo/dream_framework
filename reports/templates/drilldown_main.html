@@ -110,64 +110,65 @@
     <div class="section summary-section">
         <h2>{{ icon('pie-chart') }} Test Results</h2>
         <div class="section-description">
-            Overview of test execution results broken down by test suites, showing detailed metrics for each test category and overall test run status.
+            Overview of test execution results broken down by test suites, showing detailed metrics for each test
+            category and overall test run status.
         </div>
 
         <div class="table-wrapper">
             <table class="execution-table">
                 <thead>
-                    <tr>
-                        <th>{{ icon('folder') }} Suite</th>
-                        <th>{{ icon('layers') }} Total</th>
-                        <th>{{ icon('play') }} Attempted</th>
-                        <th>{{ icon('x-circle') }} Failed</th>
-                        <th>{{ icon('skip-forward') }} Skipped</th>
-                        <th>{{ icon('percent') }} Pass Rate</th>
-                        <th>{{ icon('check-circle') }} Result</th>
-                        <th>{{ icon('clock') }} Duration</th>
-                    </tr>
+                <tr>
+                    <th>{{ icon('folder') }} Suite</th>
+                    <th>{{ icon('layers') }} Total</th>
+                    <th>{{ icon('play') }} Attempted</th>
+                    <th>{{ icon('x-circle') }} Failed</th>
+                    <th>{{ icon('skip-forward') }} Skipped</th>
+                    <th>{{ icon('percent') }} Pass Rate</th>
+                    <th>{{ icon('check-circle') }} Result</th>
+                    <th>{{ icon('clock') }} Duration</th>
+                </tr>
                 </thead>
                 <tbody>
-                    {% for suite_name, suite in suites.items() %}
-                    <tr class="test-row-{{suite.result|lower}}">
-                        <td>
-                            <a href="suite_{{suite_name|lower|replace(' ', '_')}}.html" title="View suite details">
-                                {{suite_name}}
-                            </a>
-                        </td>
-                        <td>{{suite.total}}</td>
-                        <td>{{suite.attempted}}</td>
-                        <td>{{suite.failed}}</td>
-                        <td>{{suite.skipped}}</td>
-                        <td>{{suite.passed_percent|round(2)}}%</td>
-                        <td>
+                {% for suite_name, suite in suites.items() %}
+                <tr class="test-row-{{suite.result|lower}}">
+                    <td>
+                        <a href="suite_{{suite_name|lower|replace(' ', '_')}}.html" title="View suite details">
+                            {{suite_name}}
+                        </a>
+                    </td>
+                    <td>{{suite.total}}</td>
+                    <td>{{suite.attempted}}</td>
+                    <td>{{suite.failed}}</td>
+                    <td>{{suite.skipped}}</td>
+                    <td>{{suite.passed_percent|round(2)}}%</td>
+                    <td>
                             <span class="status-{{suite.result|lower}}">
                                 {{ render_status_icon(suite.result) }}
                                 {{suite.result}}
                             </span>
-                        </td>
-                        <td>{{suite.duration|format_duration}}</td>
-                    </tr>
-                    {% endfor %}
-                    <tr class="test-row-{{summary.result|lower}} bold">
-                        <td><strong>Overall</strong></td>
-                        <td><strong>{{summary.total}}</strong></td>
-                        <td><strong>{{summary.attempted}}</strong></td>
-                        <td><strong>{{summary.failed}}</strong></td>
-                        <td><strong>{{summary.skipped}}</strong></td>
-                        <td><strong>{{summary.passed_percent|round(2)}}%</strong></td>
-                        <td>
-                            <strong class="status-{{summary.result|lower}}">
-                                {% if summary.result == 'PASSED' %}
-                                    {{ icon('check-circle') }}
-                                {% else %}
-                                    {{ icon('x-circle') }}
-                                {% endif %}
-                                {{summary.result}}
-                            </strong>
-                        </td>
-                        <td><strong>{{test_run.duration|format_duration}}</strong></td>
-                    </tr>
+                    </td>
+                    <td>{{suite.duration|format_duration}}</td>
+                </tr>
+                {% endfor %}
+                <tr class="test-row-{{summary.result|lower}} bold">
+                    <td><strong>Overall</strong></td>
+                    <td><strong>{{summary.total}}</strong></td>
+                    <td><strong>{{summary.attempted}}</strong></td>
+                    <td><strong>{{summary.failed}}</strong></td>
+                    <td><strong>{{summary.skipped}}</strong></td>
+                    <td><strong>{{summary.passed_percent|round(2)}}%</strong></td>
+                    <td>
+                        <strong class="status-{{summary.result|lower}}">
+                            {% if summary.result == 'PASSED' %}
+                            {{ icon('check-circle') }}
+                            {% else %}
+                            {{ icon('x-circle') }}
+                            {% endif %}
+                            {{summary.result}}
+                        </strong>
+                    </td>
+                    <td><strong>{{test_run.duration|format_duration}}</strong></td>
+                </tr>
                 </tbody>
             </table>
         </div>
@@ -177,7 +178,29 @@
     {% if config.show_charts %}
     <div class="section charts-section">
         <h2>{{ icon('bar-chart') }} Test Results Charts</h2>
-        <div id="charts-container"></div>
+        <div class="section-description">
+            Visual representation of test execution results showing distribution of passed, failed, and skipped tests.
+        </div>
+
+        <div class="charts-container">
+            <!-- Summary Chart -->
+            <div class="chart-card">
+                <h3>Overall Results</h3>
+                <div class="chart-wrapper">
+                    <canvas id="summary-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Suite Comparison Chart (only if multiple suites) -->
+            {% if suites|length > 1 %}
+            <div class="chart-card">
+                <h3>Results by Suite</h3>
+                <div class="chart-wrapper">
+                    <canvas id="suites-chart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 </div>

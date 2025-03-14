@@ -292,3 +292,50 @@ td[data-column="metrics"] {
         font-size: 11px;
     }
 }
+
+/* Charts section */
+.charts-section {
+    margin-bottom: 2rem;
+}
+
+.charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.chart-card {
+    flex: 1 1 400px;
+    min-width: 300px;
+    background: var(--card-background);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.chart-card h3 {
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    text-align: center;
+    color: var(--text-color);
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chart-card {
+        flex: 1 1 100%;
+    }
+
+    .chart-wrapper {
+        height: 250px;
+    }
+}

@@ -9,9 +9,14 @@
     <link rel="stylesheet" href="css/base-layout.css">
     <link rel="stylesheet" href="{{ css_path }}">
 
+    <!-- Load Lucide icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide@0.294.0/dist/umd/lucide.min.css">
 
+    <!-- Load Chart.js if charts are enabled -->
+    {% if config.show_charts %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    {% endif %}
 </head>
 <body>
     <!-- Main content -->
@@ -24,23 +29,18 @@
         </div>
     </footer>
 
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
     <!-- Initialize icons -->
     <script>
-        lucide.createIcons();
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Lucide icons
+            lucide.createIcons();
+            console.log("Icons initialized");
+        });
     </script>
 
+    <!-- Chart initialization scripts - will run after DOM is loaded -->
     {% if config.show_charts %}
-    <!-- Chart initialization -->
     {% include "partials/chart_scripts.html" %}
     {% endif %}
-
-<script>
-    // Initialize Lucide icons
-    lucide.createIcons();
-</script>
 </body>
 </html>

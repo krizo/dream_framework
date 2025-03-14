@@ -57,9 +57,9 @@
             </div>
             <div class="metric-value">
                 {% if test_run.start_time and test_run.end_time %}
-                    {{calculate_duration(test_run.start_time, test_run.end_time)|format_duration}}
+                {{calculate_duration(test_run.start_time, test_run.end_time)|format_duration}}
                 {% else %}
-                    N/A
+                N/A
                 {% endif %}
             </div>
         </div>
@@ -74,118 +74,118 @@
         </div>
 
         {% if test_run.branch %}
-            <div class="metric">
-                <div class="metric-label">
-                    {{ icon('git-branch') }} Branch:
-                </div>
-                <div class="metric-value">
-                    {{test_run.branch}}
-                </div>
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('git-branch') }} Branch:
             </div>
+            <div class="metric-value">
+                {{test_run.branch}}
+            </div>
+        </div>
         {% endif %}
 
         {% if test_run.app_under_test %}
-            <div class="metric">
-                <div class="metric-label">
-                    {{ icon('package') }} Application:
-                </div>
-                <div class="metric-value">
-                    {{test_run.app_under_test}}
-                </div>
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('package') }} Application:
             </div>
+            <div class="metric-value">
+                {{test_run.app_under_test}}
+            </div>
+        </div>
         {% endif %}
 
         {% if test_run.app_version %}
-            <div class="metric">
-                <div class="metric-label">
-                    {{ icon('tag') }} Version:
-                </div>
-                <div class="metric-value">
-                    {{test_run.app_version}}
-                </div>
+        <div class="metric">
+            <div class="metric-label">
+                {{ icon('tag') }} Version:
             </div>
+            <div class="metric-value">
+                {{test_run.app_version}}
+            </div>
+        </div>
         {% endif %}
     </div>
 
     {% if ReportSection.TEST_RESULTS in config.sections %}
-        <div class="section summary-section">
-            <h2>{{ icon('pie-chart') }} Test Results</h2>
-            <div class="section-description">
-                Overview of test execution results broken down by test suites, showing
-                detailed metrics for each test category and overall test run status.
-            </div>
-
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>{{ icon('folder') }} Suite</th>
-                            <th>{{ icon('layers') }} Total</th>
-                            <th>{{ icon('play') }} Attempted</th>
-                            <th>{{ icon('x-circle') }} Failed</th>
-                            <th>{{ icon('skip-forward') }} Skipped</th>
-                            <th>{{ icon('percent') }} Pass Rate</th>
-                            <th>{{ icon('check-circle') }} Result</th>
-                            <th>{{ icon('clock') }} Duration</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for suite_name, suite in suites.items() %}
-                            <tr>
-                                <td>{{suite_name}}</td>
-                                <td>{{suite.total}}</td>
-                                <td>{{suite.attempted}}</td>
-                                <td>{{suite.failed}}</td>
-                                <td>{{suite.skipped}}</td>
-                                <td>
-                                    {% if suite.passed_percent is not none %}
-                                        {{suite.passed_percent|round(2)}}%
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                </td>
-                                <td class="status-{{suite.result|lower}}">
-                                    {% if suite.result == 'PASSED' %}
-                                        {{ icon('check-circle') }}
-                                    {% else %}
-                                        {{ icon('x-circle') }}
-                                    {% endif %}
-                                    {{suite.result}}
-                                </td>
-                                <td>{{suite.duration|format_duration}}</td>
-                            </tr>
-                        {% endfor %}
-                        <tr class="summary-row">
-                            <td><strong>Overall</strong></td>
-                            <td><strong>{{summary.total}}</strong></td>
-                            <td><strong>{{summary.attempted}}</strong></td>
-                            <td><strong>{{summary.failed}}</strong></td>
-                            <td><strong>{{summary.skipped}}</strong></td>
-                            <td>
-                                <strong>
-                                    {% if summary.passed_percent is not none %}
-                                        {{summary.passed_percent|round(2)}}%
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                </strong>
-                            </td>
-                            <td class="status-{{summary.result|lower}}">
-                                <strong>
-                                    {% if summary.result == 'PASSED' %}
-                                        {{ icon('check-circle') }}
-                                    {% else %}
-                                        {{ icon('x-circle') }}
-                                    {% endif %}
-                                    {{summary.result}}
-                                </strong>
-                            </td>
-                            <td><strong>{{test_run.duration|format_duration}}</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    <div class="section summary-section">
+        <h2>{{ icon('pie-chart') }} Test Results</h2>
+        <div class="section-description">
+            Overview of test execution results broken down by test suites, showing
+            detailed metrics for each test category and overall test run status.
         </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>{{ icon('folder') }} Suite</th>
+                    <th>{{ icon('layers') }} Total</th>
+                    <th>{{ icon('play') }} Attempted</th>
+                    <th>{{ icon('x-circle') }} Failed</th>
+                    <th>{{ icon('skip-forward') }} Skipped</th>
+                    <th>{{ icon('percent') }} Pass Rate</th>
+                    <th>{{ icon('check-circle') }} Result</th>
+                    <th>{{ icon('clock') }} Duration</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for suite_name, suite in suites.items() %}
+                <tr>
+                    <td>{{suite_name}}</td>
+                    <td>{{suite.total}}</td>
+                    <td>{{suite.attempted}}</td>
+                    <td>{{suite.failed}}</td>
+                    <td>{{suite.skipped}}</td>
+                    <td>
+                        {% if suite.passed_percent is not none %}
+                        {{suite.passed_percent|round(2)}}%
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td class="status-{{suite.result|lower}}">
+                        {% if suite.result == 'PASSED' %}
+                        {{ icon('check-circle') }}
+                        {% else %}
+                        {{ icon('x-circle') }}
+                        {% endif %}
+                        {{suite.result}}
+                    </td>
+                    <td>{{suite.duration|format_duration}}</td>
+                </tr>
+                {% endfor %}
+                <tr class="summary-row">
+                    <td><strong>Overall</strong></td>
+                    <td><strong>{{summary.total}}</strong></td>
+                    <td><strong>{{summary.attempted}}</strong></td>
+                    <td><strong>{{summary.failed}}</strong></td>
+                    <td><strong>{{summary.skipped}}</strong></td>
+                    <td>
+                        <strong>
+                            {% if summary.passed_percent is not none %}
+                            {{summary.passed_percent|round(2)}}%
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </strong>
+                    </td>
+                    <td class="status-{{summary.result|lower}}">
+                        <strong>
+                            {% if summary.result == 'PASSED' %}
+                            {{ icon('check-circle') }}
+                            {% else %}
+                            {{ icon('x-circle') }}
+                            {% endif %}
+                            {{summary.result}}
+                        </strong>
+                    </td>
+                    <td><strong>{{test_run.duration|format_duration}}</strong></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
     {% endif %}
 
     <div class="section execution-details">
@@ -197,71 +197,100 @@
         </div>
 
         {% for suite_name, suite_data in suites.items() %}
-            <div class="test-suite">
-                <h3>{{ icon('folder') }} {{suite_name}}</h3>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>{{ icon('hash') }} No.</th>
-                                {% for col in config.table_config.columns %}
-                                    <th>{{ get_column_header(col) }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for execution in suite_data.executions %}
-                                <tr>
-                                    <td>{{loop.index}}</td>
-                                    {% for col in config.table_config.columns %}
-                                        <td>
-                                            {%- if col == 'test_name' -%}
-                                                {{execution.test_case.name if execution.test_case else execution.name}}
-                                            {%- elif col == 'test_function' -%}
-                                                {{execution.test_function}}
-                                            {%- elif col == 'description' -%}
-                                                {{execution.test_case.description if execution.test_case else execution.description}}
-                                            {%- elif col == 'result' -%}
-                                                <span class="status-{{execution.result|lower}}">
-                                                    {% if execution.result == 'PASSED' %}
-                                                        {{ icon('check-circle') }}
-                                                    {% elif execution.result == 'FAILED' %}
-                                                        {{ icon('x-circle') }}
-                                                    {% else %}
-                                                        {{ icon('alert-circle') }}
-                                                    {% endif %}
-                                                    {{execution.result}}
-                                                </span>
-                                            {%- elif col == 'duration' -%}
-                                                {{execution.duration|format_duration if execution.duration else 'N/A'}}
-                                            {%- elif col == 'failure' and execution.failure -%}
-                                                {{execution.failure}}
-                                            {%- elif col == 'failure_type' and execution.failure_type -%}
-                                                {{execution.failure_type}}
-                                            {%- elif col == 'test_start' -%}
-                                                {{execution.start_time|format_timestamp}}
-                                            {%- elif col == 'test_end' -%}
-                                                {{execution.end_time|format_timestamp}}
-                                            {%- elif col == 'steps' and execution.steps -%}
-                                                <a href="steps_logs/{{execution.test_function}}_steps.html" target="_blank">
-                                                    {{ icon('list') }} View Steps ({{execution.steps|length}})
-                                                </a>
-                                            {%- elif col == 'custom_metrics' and execution.custom_metrics -%}
-                                                <a href="metrics_logs/{{execution.test_function}}_metrics.html" target="_blank">
-                                                    {{ icon('list') }} View Metrics ({{execution.custom_metrics|length}})
-                                                </a>
-                                            {%- else -%}
-                                                -
-                                            {%- endif -%}
-                                        </td>
-                                    {% endfor %}
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        <div class="test-suite">
+            <h3>{{ icon('folder') }} {{suite_name}}</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>{{ icon('hash') }} No.</th>
+                        {% for col in config.table_config.columns %}
+                        <th>{{ get_column_header(col) }}</th>
+                        {% endfor %}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for execution in suite_data.executions %}
+                    <tr class="test-row-{{execution.result|lower}}">
+                        <td>{{loop.index}}</td>
+                        {% for col in config.table_config.columns %}
+                        <td>
+                            {%- if col == 'test_name' -%}
+                            {{execution.test_case.name if execution.test_case else execution.name}}
+                            {%- elif col == 'test_function' -%}
+                            {{execution.test_function}}
+                            {%- elif col == 'description' -%}
+                            {{execution.test_case.description if execution.test_case else execution.description}}
+                            {%- elif col == 'result' -%}
+                            <span class="status-{{execution.result|lower}}">
+                                            {% if execution.result == 'PASSED' %}
+                                                {{ icon('check-circle') }}
+                                            {% elif execution.result == 'FAILED' %}
+                                                {{ icon('x-circle') }}
+                                            {% else %}
+                                                {{ icon('alert-circle') }}
+                                            {% endif %}
+                                            {{execution.result}}
+                                        </span>
+                            {%- elif col == 'duration' -%}
+                            {{execution.duration|format_duration if execution.duration else 'N/A'}}
+                            {%- elif col == 'failure' and execution.failure -%}
+                            {{execution.failure}}
+                            {%- elif col == 'failure_type' and execution.failure_type -%}
+                            {{execution.failure_type}}
+                            {%- elif col == 'test_start' -%}
+                            {{execution.start_time|format_timestamp}}
+                            {%- elif col == 'test_end' -%}
+                            {{execution.end_time|format_timestamp}}
+                            {%- elif col == 'steps' and execution.steps -%}
+                            <a href="steps_logs/{{execution.test_function}}_steps.html" target="_blank">
+                                {{ icon('list') }} View Steps ({{execution.steps|length}})
+                            </a>
+                            {%- elif col == 'custom_metrics' and execution.custom_metrics -%}
+                            <a href="metrics_logs/{{execution.test_function}}_metrics.html" target="_blank">
+                                {{ icon('list') }} View Metrics ({{execution.custom_metrics|length}})
+                            </a>
+                            {%- else -%}
+                            -
+                            {%- endif -%}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
+        </div>
         {% endfor %}
     </div>
+
+    {% if config.show_charts %}
+    <div class="section charts-section">
+        <h2>{{ icon('bar-chart') }} Test Results Charts</h2>
+        <div class="section-description">
+            Visual representation of test execution results showing distribution of passed, failed, and skipped tests.
+        </div>
+
+        <div class="charts-container">
+            <!-- Summary Chart -->
+            <div class="chart-card">
+                <h3>Overall Results</h3>
+                <div class="chart-wrapper">
+                    <canvas id="summary-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Suite Comparison Chart (only if multiple suites) -->
+            {% if suites|length > 1 %}
+            <div class="chart-card">
+                <h3>Results by Suite</h3>
+                <div class="chart-wrapper">
+                    <canvas id="suites-chart"></canvas>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
