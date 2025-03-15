@@ -5,7 +5,6 @@ from typing import Dict, Optional, TypeVar, Generic, List
 from playwright.sync_api import Page, expect, Locator
 
 from core.frontend.playwright.base_elements import BasePageElements
-from core.frontend.playwright.page_object_meta import PageObjectMeta
 from core.frontend.playwright.playwright_manager import PlaywrightManager
 from core.logger import Log
 from core.step import step_start

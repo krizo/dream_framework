@@ -158,7 +158,6 @@ class AutomationDatabaseManager:
             if not tables:
                 return
 
-            Log.info(f"Dropping tables: {', '.join(tables)}")
             metadata = MetaData()
             metadata.reflect(bind=cls._db_instance.engine)
 
@@ -167,7 +166,6 @@ class AutomationDatabaseManager:
                 Log.debug(f"Dropping table {table_name}")
                 table_name.drop(cls._db_instance.engine)
 
-            Log.info("Successfully dropped all database tables")
         except Exception as e:
             Log.error(f"Error dropping database tables: {str(e)}")
             raise

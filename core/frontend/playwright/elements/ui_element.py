@@ -5,6 +5,7 @@ from playwright.sync_api import Page, Locator, expect
 
 from core.frontend.playwright.elements.element_locator import ElementLocator
 from core.frontend.playwright.elements.elements_config import UIElementConfig
+from helpers.decorators import wait_until
 
 T = TypeVar('T', bound='UIElement')
 
@@ -238,6 +239,15 @@ class UIElement(ABC):
         actual_timeout = timeout or self.timeout
         expect(self.get_locator()).to_be_enabled(timeout=actual_timeout * 1000)
         return self
+
+    @wait_until(timeout=10, interval=0.5)
+    def wait_for_enabled(self):
+        """
+        Wait for element to be enabled.
+        """
+        assert self.expect_enabled(), "Element is not enabled"
+        return self
+
 
     def expect_disabled(self, timeout: Optional[int] = None) -> 'UIElement':
         """
