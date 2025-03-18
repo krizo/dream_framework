@@ -1,4 +1,7 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Dict
+import functools
+import random
+import time
 
 from data.data_factories.test_data_factory import TestDataFactory
 
@@ -6,6 +9,9 @@ from data.data_factories.test_data_factory import TestDataFactory
 class TestDataGenerator:
     """
     Base class for test data generation
+
+    Each new instance will generate fresh data, but properties will
+    return consistent values once accessed.
 
     Usage:
         class UserTestData(TestDataGenerator):
@@ -32,31 +38,42 @@ class TestDataGenerator:
             locale: Locale for data generation
             seed: Optional seed for reproducible data
         """
+        # Generate a new seed for each instance if not provided
+        if seed is None:
+            # Use current time and a random component to ensure uniqueness
+            seed = int(time.time() * 1000) + random.randint(1, 1000000)
+
         self.factory = TestDataFactory(locale, seed)
         self._cache = {}
+        
+        # Apply caching to all properties
+        self._wrap_properties()
 
-    def __getattr__(self, name):
+    def _wrap_properties(self):
         """
-        Implement caching of property values by default
-
-        This ensures consistency when accessing properties multiple times
-        (first_name will be the same each time it's accessed)
+        Wrap all property getters with a caching mechanism
         """
-        # First, check in cache
-        if name in self._cache:
-            return self._cache[name]
-
-        # Try to get the property value
-        if name in dir(self.__class__):
+        # Get all properties from the class
+        for name in dir(self.__class__):
+            if name.startswith('_'):
+                continue
+                
             attr = getattr(self.__class__, name)
-            if isinstance(attr, property):
-                # Get the property value and cache it
-                value = attr.__get__(self, self.__class__)
-                self._cache[name] = value
-                return value
-
-        # Attribute not found
-        raise AttributeError(f"'{self.__class__.__name__}' has no attribute '{name}'")
+            if isinstance(attr, property) and attr.fget:
+                # Create a cached version of the property getter
+                original_getter = attr.fget
+                
+                @functools.wraps(original_getter)
+                def cached_getter(self_obj, orig_getter=original_getter, prop_name=name):
+                    if prop_name not in self_obj._cache:
+                        self_obj._cache[prop_name] = orig_getter(self_obj)
+                    return self_obj._cache[prop_name]
+                
+                # Create a new property with the cached getter
+                new_prop = property(cached_getter, attr.fset, attr.fdel, attr.__doc__)
+                
+                # Set the new property on the instance
+                setattr(type(self), name, new_prop)
 
     def regenerate(self, *fields):
         """
