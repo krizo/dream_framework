@@ -3,18 +3,22 @@ from typing import Any, List, Dict, Pattern, Set, Callable, Union, Tuple
 import math
 
 
-def assert_equals(actual: Any, expected: Any, description: str = "Values should be equal"):
+def assert_equals(actual: Any, expected: Any, ignore_case: bool = False, description: str = "Values should be equal"):
     """
     Asserts the two values are equal, or raises error including the provided description.
     
     Args:
         actual: The actual value to check
         expected: The expected value to compare against
+        ignore_case: Whether to ignore case for strings (default: False)
         description: Description of the assertion for the error message
     
     Raises:
         AssertionError: If actual != expected
     """
+    if ignore_case:
+        actual = actual.lower() if isinstance(actual, str) else actual
+        expected = expected.lower() if isinstance(expected, str) else expected
     assert actual == expected, f"{description}, expected: '{expected}' != actual: '{actual}'"
 
 

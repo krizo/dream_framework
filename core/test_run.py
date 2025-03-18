@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, Type
 
 from core.configuration.framework_config import FrameworkConfig
+from core.configuration.test_run_config import TestRunConfig
 from core.logger import Log
 
 
@@ -137,14 +138,16 @@ class TestRun:
         ci_vars = ['BUILD_NUMBER', 'CI_BUILD_ID', 'BUILD_ID']
         return any(var in os.environ for var in ci_vars)
 
-    def _get_build_id(self) -> Optional[str]:
+    @staticmethod
+    def _get_build_id() -> Optional[str]:
         """Get CI build ID if available."""
         for var in ['BUILD_NUMBER', 'CI_BUILD_ID', 'BUILD_ID']:
             if var in os.environ:
                 return os.environ[var]
         return None
 
-    def _get_git_branch(self) -> Optional[str]:
+    @staticmethod
+    def _get_git_branch() -> Optional[str]:
         """Get current git branch."""
         try:
             import git
@@ -153,13 +156,15 @@ class TestRun:
         except Exception:
             return None
 
-    def _get_app_under_test(self) -> str:
+    @staticmethod
+    def _get_app_under_test() -> str:
         """Get name of application under test."""
-        return "example_app"
+        return TestRunConfig.get_app_under_test()
 
-    def _get_app_version(self) -> str:
+    @staticmethod
+    def _get_app_version() -> str:
         """Get version of application under test."""
-        return "1.0.0"
+        return TestRunConfig.get_app_version()
 
     def get_log_dir(self) -> Path:
         """Get path to log directory for this run."""
