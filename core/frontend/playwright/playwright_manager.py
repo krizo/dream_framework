@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 
 from playwright.sync_api import Playwright, Browser, BrowserContext, Page, BrowserType, sync_playwright
 
@@ -52,6 +52,9 @@ class PlaywrightManager:
         self._videos_dir = self.config.get_videos_dir()
         self._traces_dir = self.config.get_traces_dir()
 
+        # Initialize flag to control single tab mode BEFORE starting Playwright
+        self._force_single_tab = self.config.force_single_tab()
+
         # Initialize Playwright
         self._start_playwright()
         self._initialized = True
@@ -91,6 +94,10 @@ class PlaywrightManager:
                 self._active_pages.append(self._page)
                 self._page.set_default_timeout(self.config.get_timeout())
 
+                # Set up single tab mode if enabled
+                if self._force_single_tab:
+                    self._setup_single_tab_mode(self._page)
+
         # Return the last page (most likely the active one)
         if self._active_pages:
             self._page = self._active_pages[-1]
@@ -121,6 +128,47 @@ class PlaywrightManager:
 
         return None
 
+    def _setup_single_tab_mode(self, page: Page) -> None:
+        """
+        Set up the page to force links to open in the same tab.
+        This modifies target="_blank" links and adds listeners for popups.
+
+        @param page: Page to set up
+        """
+        # Add script to modify target="_blank" links when clicked
+        page.add_init_script("""
+        window.addEventListener('DOMContentLoaded', () => {
+            // Function to handle clicks on links
+            function handleLinkClick(event) {
+                // Find the closest anchor element
+                let target = event.target.closest('a');
+                
+                // If it's a link with target="_blank"
+                if (target && target.target === '_blank') {
+                    // Prevent default behavior
+                    event.preventDefault();
+                    
+                    // Get the href
+                    const href = target.href;
+                    
+                    // Navigate in the same window
+                    if (href) {
+                        window.location.href = href;
+                    }
+                }
+            }
+            
+            // Add the click listener
+            document.addEventListener('click', handleLinkClick, true);
+            
+            // Also modify all existing links with target="_blank"
+            document.querySelectorAll('a[target="_blank"]').forEach(link => {
+                link.addEventListener('click', handleLinkClick);
+            });
+        });
+        """)
+
+        Log.info("Single tab mode enabled: Links configured to open in the same tab")
 
     def _start_playwright(self) -> None:
         """
@@ -156,6 +204,12 @@ class PlaywrightManager:
             # Create initial page
             self._page = self._context.new_page()
             self._page.set_default_timeout(self.config.get_timeout() * 1000)
+
+            # Set up single tab mode if enabled
+            if self._force_single_tab:
+                self._setup_single_tab_mode(self._page)
+
+            # Listen for new pages
             self._context.on("page", self._handle_new_page)
 
         except Exception as e:
@@ -168,9 +222,38 @@ class PlaywrightManager:
 
         @param page: New page instance
         """
+        # If force single tab mode is enabled, handle differently
+        if self._force_single_tab and self._page:
+            try:
+                # Wait briefly for the page to initialize
+                page.wait_for_load_state("domcontentloaded", timeout=5000)
+
+                # Try to get the URL after the page has started loading
+                try:
+                    new_url = page.url
+
+                    if new_url and new_url != "about:blank":
+                        # Navigate the main page to the new URL
+                        Log.info(f"Redirecting main tab to: {new_url} (from new tab)")
+                        self._page.goto(new_url)
+                except Exception as url_error:
+                    Log.warning(f"Error getting URL from new page: {str(url_error)}")
+
+                # Close the new page
+                try:
+                    page.close()
+                    Log.info("Closed new tab due to single tab mode")
+                except Exception as close_error:
+                    Log.warning(f"Error closing new page: {str(close_error)}")
+
+                return
+            except Exception as e:
+                Log.warning(f"Error handling new page in single tab mode: {str(e)}")
+                # Fall through to default behavior if there's an error
+
+        # Default behavior: add to active pages
         self._active_pages.append(page)
         self._page = page
-
     def new_page(self) -> Page:
         """
         Create a new page.
@@ -182,7 +265,27 @@ class PlaywrightManager:
 
         page = self._context.new_page()
         page.set_default_timeout(self.config.get_timeout() * 1000)
+
+        # Set up single tab mode if enabled
+        if self._force_single_tab:
+            self._setup_single_tab_mode(page)
+
         return page
+
+    def set_force_single_tab(self, enabled: bool = True) -> None:
+        """
+        Enable or disable force single tab mode.
+        When enabled, all links will open in the current tab instead of new tabs.
+
+        @param enabled: Whether to enable single tab mode
+        """
+        self._force_single_tab = enabled
+
+        # Apply to current page if it exists
+        if self._page and enabled:
+            self._setup_single_tab_mode(self._page)
+
+        Log.info(f"Single tab mode {'enabled' if enabled else 'disabled'}")
 
     def take_screenshot(self, name: str, page: Optional[Page] = None, full_page: bool = True) -> str:
         """

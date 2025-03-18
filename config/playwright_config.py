@@ -163,3 +163,12 @@ class PlaywrightConfig(ConfigParser):
             args['ignore_https_errors'] = True
 
         return args
+
+    @classmethod
+    def force_single_tab(cls) -> bool:
+        """
+        Check if all links should be forced to open in the current tab.
+
+        @return: True if all links should open in the same tab, False otherwise
+        """
+        return cls.get_value('force_single_tab', False)
